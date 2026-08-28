@@ -206,6 +206,10 @@
      inputs so the two line up; .lbl flexes and absorbs the tag column,
      whose width differs between MEAS and GUESS. */
   .row.hdr{padding:3px 2px 7px;border-bottom:1px solid var(--rule);align-items:flex-end;}
+  /* the bag carries five columns of meaning in four boxes plus a tag, so
+     it runs narrower than the other drawers */
+  #bagRows input{width:56px;}
+  #bagRows .hdr span:not(.lbl){width:56px;}
   .row.hdr span:not(.lbl){width:64px;text-align:right;font-family:var(--sans);font-size:7.5px;
     letter-spacing:.11em;text-transform:uppercase;color:var(--brass);line-height:1.32;}
   /* What each column actually means, in words. */
@@ -342,6 +346,11 @@
       <div class="chip-grid" id="shotChips"></div>
     </div>
 
+    <div class="field">
+      <div class="flabel"><span>Loft</span><span class="hint">the vertical bar, not the ball</span></div>
+      <div class="chip-grid" id="loftChips"></div>
+    </div>
+
     <button class="go" id="btnGo">Give me the shot</button>
     <button class="reset" id="btnReset">Clear conditions</button>
 
@@ -361,9 +370,12 @@
         Always the larger of the two.</span>
         <b>Green roll</b><span>How much the club runs on a <em>green</em> compared with that
         fairway roll. 1.0 means it runs just as far; 0.5 means it checks up and rolls half as
-        far. Flat-flying woods release, steep short irons bite. Only the 5 Iron and 3 Wood are
-        measured &mdash; the rest are estimated from trajectory, and the shot log will offer you
-        a better number once you have logged five shots with a club.</span>
+        far; the 60&deg; measures 0.00 and simply does not release. Five clubs are
+        <span class="tag ok">MEAS</span> &mdash; measured from paired fairway and green runs in
+        the same session &mdash; and the other eight are <span class="tag guess">INTERP</span>,
+        worked out linearly on carry between those five. Interpolated is derived, not observed.
+        The shot log will offer you a better number once you have logged five shots with a
+        club.</span>
       </div>
       <div id="bagRows"></div>
     </details>
@@ -523,21 +535,32 @@
 <script>
 /* gr = how much this club rolls on a GREEN vs its own fairway roll.
    Trajectory-driven: flat-flying woods release, steep short irons check up.
-   5 Iron and 3 Wood measured from live shots; the rest interpolated. */
+
+   FIVE ARE MEASURED, from paired fairway->fairway and fairway->green runs
+   in the same session: green roll divided by fairway roll, same club.
+     9 Iron  3/11   3 Iron 23/21   Driver 25/20
+     7 Iron and 60 deg from a green run against their logged fairway ratio.
+   The other eight are INTERPOLATED linearly on max carry between those
+   five points, and carry grSrc:"INTERP" so they read as estimates
+   everywhere provenance is shown. They are derived, not observed.
+
+   These replaced a set of guesses. Most moved a long way: the short irons
+   and wedges check up far harder than the old numbers assumed, and the
+   60 deg does not release at all. */
 var BAG=[
- {name:"Driver",max:290,min:237,total:311,cls:"wood",driver:true,gr:1.50},
- {name:"3 Wood",max:254,min:204,total:270,cls:"wood",gr:1.45},
- {name:"2 Iron",max:224,min:140,total:241,cls:"iron",gr:1.15},
- {name:"3 Iron",max:213,min:134,total:227,cls:"iron",gr:1.00},
- {name:"5 Iron",max:192,min:123,total:206,cls:"iron",gr:0.60},
- {name:"6 Iron",max:182,min:117,total:190,cls:"iron",gr:0.58},
- {name:"7 Iron",max:172,min:112,total:181,cls:"iron",gr:0.55},
- {name:"8 Iron",max:160,min:105,total:170,cls:"iron",gr:0.52},
- {name:"9 Iron",max:150,min:100,total:155,cls:"iron",gr:0.50},
- {name:"PW",    max:133,min:90, total:142,cls:"iron",gr:0.45},
- {name:"50\u00B0",max:120,min:82,total:123,cls:"wedge",gr:0.40},
- {name:"56\u00B0",max:105,min:74,total:105,cls:"wedge",gr:0.35},
- {name:"60\u00B0",max:97, min:67,total:98, cls:"wedge",gr:0.30}
+ {name:"Driver",max:290,min:237,total:311,cls:"wood",driver:true,gr:1.25,grSrc:"MEAS"},
+ {name:"3 Wood",max:254,min:204,total:270,cls:"wood",gr:1.18,grSrc:"INTERP"},
+ {name:"2 Iron",max:224,min:140,total:241,cls:"iron",gr:1.12,grSrc:"INTERP"},
+ {name:"3 Iron",max:213,min:134,total:227,cls:"iron",gr:1.10,grSrc:"MEAS"},
+ {name:"5 Iron",max:192,min:123,total:206,cls:"iron",gr:0.82,grSrc:"INTERP"},
+ {name:"6 Iron",max:182,min:117,total:190,cls:"iron",gr:0.69,grSrc:"INTERP"},
+ {name:"7 Iron",max:172,min:112,total:181,cls:"iron",gr:0.56,grSrc:"MEAS"},
+ {name:"8 Iron",max:160,min:105,total:170,cls:"iron",gr:0.40,grSrc:"INTERP"},
+ {name:"9 Iron",max:150,min:100,total:155,cls:"iron",gr:0.27,grSrc:"MEAS"},
+ {name:"PW",    max:133,min:90, total:142,cls:"iron",gr:0.19,grSrc:"INTERP"},
+ {name:"50\u00B0",max:120,min:82,total:123,cls:"wedge",gr:0.12,grSrc:"INTERP"},
+ {name:"56\u00B0",max:105,min:74,total:105,cls:"wedge",gr:0.05,grSrc:"INTERP"},
+ {name:"60\u00B0",max:97, min:67,total:98, cls:"wedge",gr:0.00,grSrc:"MEAS"}
 ];
 
 /* maxPct / minPct = the shot's dial window as a fraction of that club's MAX.
@@ -547,15 +570,16 @@ var BAG=[
 /* MEASURED windows, read off the game screen: box number = max carry,
    arrow at the lowest available power = min. Driver not yet collected. */
 var WINDOWS={
+ "Driver":{tee:[290,232],sting:[257,176]},
  "PW":{appr:[133,90],chokea:[127,120],pitch:[60,12],spin:[56,29],lflop:[46,28],flop:[33,20],sflop:[18,11],chip:[16,2],thai:[17,13]},
- "9 Iron":{appr:[149,100],chokea:[142,134],punch:[118,27],chokep:[100,9],runner:[64,14]},
+ "9 Iron":{appr:[149,100],chokea:[142,134],punch:[118,27],chokep:[100,9],runner:[64,14],ppick:[112,71]},
  "8 Iron":{appr:[159,105],chokea:[151,143],punch:[129,29],chokep:[110,10],runner:[68,15]},
  "7 Iron":{appr:[170,112],chokea:[162,153],punch:[139,30],lknock:[130,33],chokep:[119,11],runner:[71,16]},
  "6 Iron":{appr:[181,117],chokea:[172,162],punch:[151,31],lknock:[140,34],chokep:[129,13],runner:[74,17]},
  "5 Iron":{appr:[192,123],chokea:[183,172],punch:[162,32],lknock:[151,35],chokep:[139,14],runner:[77,17]},
- "3 Iron":{appr:[213,134],chokea:[203,191],punch:[182,32],lknock:[168,35],chokep:[156,28]},
+ "3 Iron":{appr:[213,134],chokea:[203,191],punch:[182,32],lknock:[168,35],chokep:[156,28],ppick:[189,120]},
  "2 Iron":{appr:[224,140],chokea:[213,200],punch:[192,33],lknock:[177,35],chokep:[164,28]},
- "3 Wood":{appr:[254,204],chokea:[246,234],punch:[228,61],chokep:[194,49]},
+ "3 Wood":{tee:[254,200],sting:[234,158],appr:[254,204],chokea:[246,234],punch:[228,61],chokep:[194,49]},
  "50\u00B0":{appr:[120,82],chokea:[114,108],pitch:[58,12],spin:[54,28],lflop:[43,26],flop:[31,18],thai:[16,12],sflop:[16,10],chip:[15,2]},
  /* 56 deg lflop + flop carry INTERPOLATED values — see INTERP below, which
     forces measured:false so the card shows the estimated-window warning.
@@ -567,7 +591,7 @@ var WINDOWS={
     Measuring replaces them: put the real pair here AND delete the matching
     key from INTERP, or they will keep reporting as estimated. */
  "56\u00B0":{appr:[105,74],chokea:[100,95],pitch:[53,11],spin:[50,27],lflop:[39,24],flop:[28,16],thai:[15,11],sflop:[14,9],chip:[14,2]},
- "60\u00B0":{appr:[95,67],chokea:[91,86],pitch:[48,10],spin:[48,26],lflop:[36,22],flop:[26,15],thai:[13,10],sflop:[13,8],chip:[14,2]}
+ "60\u00B0":{appr:[95,67],chokea:[91,86],pitch:[48,10],spin:[48,26],lflop:[36,22],flop:[26,15],thai:[13,10],sflop:[13,8],chip:[14,2],splash:[44,5],pick:[22,3],blast:[41,5]}
 };
 
 /* INTERP — club/shot pairs whose WINDOWS entry was INTERPOLATED from measured
@@ -663,6 +687,36 @@ var WINDS=[
  {key:"qtR",   deg:315, tx:"Q TAIL R", head:-1,cross:-1,q:true}
 ];
 
+/* Loft - the vertical bar on the shaping screen, named by the flight it
+   produces. Effect on carry is a percentage, fitted linearly on the
+   club's max carry between the 60 deg and the Driver:
+     full low  = -6.3% + (max - 95) * (5.6/195)
+     full high = +3.2% - (max - 95) * (3.2/195)
+   giving -6.3/+3.2 on the 60 deg, -4.1/+1.9 on the 7 Iron, -0.7/0 on the
+   Driver. Half positions are half the full value.
+
+   The 7 Iron was deliberately held OUT of the fit and used to check it:
+   measured -4.1%/+2.4% against predicted -4.1%/+1.9%, inside 0.3% on the
+   half that matters. That is why the line is trusted across the bag.
+
+   Roll is a separate, weaker claim: measured on the 7 Iron ONLY - full
+   high 4 yd against 5 neutral, full low 6 - so roughly 0.8x and 1.2x.
+   One club is not a curve. It is an estimate and says so. */
+var LOFTS=[
+ {v:-2,name:"Full low"},
+ {v:-1,name:"Half low"},
+ {v:0, name:"Neutral"},
+ {v:1, name:"Half high"},
+ {v:2, name:"Full high"}
+];
+function loftCarryPct(club,pos){
+  if(!pos) return 0;
+  var full = pos<0 ? (-6.3 + (club.max-95)*(5.6/195))
+                   : ( 3.2 - (club.max-95)*(3.2/195));
+  return full*(Math.abs(pos)/2);
+}
+function loftRollMult(pos){ return 1 - pos*0.1; }
+
 var GREENSPEED=[
  {key:"slow",name:"Slow",   mult:0.80},
  {key:"avg", name:"Average",mult:1.00},
@@ -678,7 +732,7 @@ var LANDING=[
 ];
 
 var S={dist:150,haz:0,lieLo:98,lieHi:99,elev:0,elevUp:true,wind:0,windDir:"none",
-       shot:"auto",land:"green",from:"turf",gspeed:"avg"};
+       shot:"auto",land:"green",from:"turf",gspeed:"avg",loft:0};
 
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
@@ -724,6 +778,16 @@ function buildCompass(){
     d.className="cbtn"+(S.windDir===w.key?" active":"");
     d.innerHTML=windArrow(w.deg)+'<span class="tx">'+w.tx+'</span>';
     d.onclick=function(){S.windDir=w.key;buildCompass();};
+    el.appendChild(d);
+  });
+}
+function buildLoftChips(){
+  var el=$("loftChips"); el.innerHTML="";
+  LOFTS.forEach(function(l){
+    var d=document.createElement("div");
+    d.className="chip"+(S.loft===l.v?" active":"");
+    d.textContent=l.name;
+    d.onclick=function(){S.loft=l.v;buildLoftChips();};
     el.appendChild(d);
   });
 }
@@ -779,7 +843,11 @@ function buildBag(){
     '<span>Max<br>carry</span><span>Max<br>total</span><span>Green<br>roll</span></div>';
   BAG.forEach(function(c,i){
     var r=document.createElement("div"); r.className="row";
-    r.innerHTML='<span class="lbl">'+c.name+'</span>'+
+    /* The tag reports the GREEN ROLL column only - the first three come
+       off the bag screen and are yours by definition. */
+    r.innerHTML='<span class="lbl">'+c.name+
+      '<span class="tag '+(c.grSrc==="MEAS"?"ok":"guess")+'" data-grsrc="'+i+'">'+
+      (c.grSrc==="MEAS"?"MEAS":"INTERP")+'</span></span>'+
       '<input type="number" data-i="'+i+'" data-f="min" value="'+c.min+'" title="min carry">'+
       '<input type="number" data-i="'+i+'" data-f="max" value="'+c.max+'" title="max carry">'+
       '<input type="number" data-i="'+i+'" data-f="total" value="'+c.total+'" title="max total">'+
@@ -842,9 +910,10 @@ $("udDown").onclick=function(){S.elevUp=false;$("udDown").classList.add("active"
 $("btnReset").onclick=function(){
   ["fHaz","fElev","fWind","fLieLo","fLieHi"].forEach(function(id){$(id).value="";});
   S.windDir="none"; S.shot="auto"; S.elevUp=true; S.land="green";
-  S.from="turf"; S.gspeed="avg";
+  S.from="turf"; S.gspeed="avg"; S.loft=0;
   $("udUp").classList.add("active"); $("udDown").classList.remove("active");
   buildSurf(); buildCompass(); buildShotChips(); buildLandChips(); buildGsChips();
+  buildLoftChips();
 };
 
 $("btnGo").onclick=function(){
@@ -911,13 +980,37 @@ function autoShot(dist,wind,lieMid){
 
    The Driver rule is NOT relaxed - that is a rule about play, not a gap
    in the data. */
+/* Compatibility read off the game screen during live testing. These are
+   observations about what the game DOES offer, so they outrank the
+   hand-written class list and a measured window alike: if a pairing does
+   not exist, no window for it can be real.
+
+   Choked tee is deliberately absent from WINDOWS on both woods - it read
+   264/277, a max below its own min, and 264 above the 3 Wood's own 254
+   max carry. A bad reading is not data; it is being re-taken. */
+var NOT_OFFERED={
+ "Driver":{appr:1},
+ "3 Iron":{recov:1, chip:1},
+ "9 Iron":{lknock:1, splash:1}
+};
+/* Offered, but only from certain lies. */
+var ONLY_FROM={
+ "3 Iron":{lknock:["turf"]},          /* fairway only, not rough or sand */
+ "9 Iron":{punch:["tee","turf","rough"]}   /* not from sand */
+};
+
 function hasMeasuredWindow(club,shot){
   var w=WINDOWS[club.name], p=w&&w[shot.key];
   return !!(p && p[0]>0 && p[1]>0);
 }
-function clubAllowed(club,shot){
+function clubAllowed(club,shot,from){
   var teeOnly={tee:1,pdrive:1,sting:1,choket:1,deck:1,auto:1};
   if(club.driver && !teeOnly[shot.key]) return false;
+  if(NOT_OFFERED[club.name] && NOT_OFFERED[club.name][shot.key]) return false;
+  if(from){
+    var of=ONLY_FROM[club.name] && ONLY_FROM[club.name][shot.key];
+    if(of && of.indexOf(from)<0) return false;
+  }
   if(shot.clubs.indexOf(club.cls)>=0) return true;
   return hasMeasuredWindow(club,shot);
 }
@@ -955,7 +1048,7 @@ function compute(){
   var headMph=wd.head*S.wind*qf*shot.windMult;
   /* LEGAL is the hard rule: right class of club, and the Driver only off
      a tee. It is never relaxed. */
-  var legal=BAG.filter(function(c){ return clubAllowed(c,shot); });
+  var legal=BAG.filter(function(c){ return clubAllowed(c,shot,S.from); });
   /* USABLE narrows that to clubs with a measured window for this shot. */
   var usable=legal.filter(function(c){
     var w=WINDOWS[c.name];
@@ -977,6 +1070,7 @@ function compute(){
      where does the ball land and stop? */
   function fly(D,L,ratio,club){
     var carry=D*(L/100);
+    carry*=1+loftCarryPct(club,S.loft)/100;
     carry-=elevCost;
     /* Which rate fired, and what it cost, is recorded on the way out.
        The shot log reads these off the result rather than re-deriving
@@ -993,8 +1087,12 @@ function compute(){
       carry-=windYd;
     }
     carry=Math.max(1,carry);
-    var gr=(S.land==="green"||S.land==="fringe")?(club.gr||1):1;
-    var roll=(shot.roll>0?shot.roll:carry*ratio)*landMult*gr;
+    /* NOT club.gr||1 - the 60 deg measures 0.00 and does not release at
+       all on a green, and `0||1` would quietly turn the flattest club in
+       the bag into the rolliest. Only a missing value falls back to 1. */
+    var grV=(club.gr===0||club.gr>0)?club.gr:1;
+    var gr=(S.land==="green"||S.land==="fringe")?grV:1;
+    var roll=(shot.roll>0?shot.roll:carry*ratio)*landMult*gr*loftRollMult(S.loft);
     return {carry:carry,roll:roll,stop:carry+roll,
             rateId:rateId,windYd:windYd,elevYd:elevCost,gr:gr};
   }
@@ -1139,6 +1237,7 @@ function compute(){
   if(S.wind) bits.push(S.wind+" mph "+wd.tx.toLowerCase());
   bits.push("lie "+S.lieLo+"\u2013"+S.lieHi+"%");
   bits.push("lands on "+landSurf.name.toLowerCase());
+  if(S.loft) bits.push((LOFTS.filter(function(l){return l.v===S.loft;})[0].name)+" loft");
   if(S.haz) bits.push("carry "+S.haz);
   if(spread>=2) bits.push(Math.round(spread)+" yd lie spread");
   $("recapRow").textContent=bits.join("  \u00B7  ");
@@ -1149,7 +1248,7 @@ function compute(){
   LAST={
     club:R.club.name, shotKey:shot.key, shotName:shot.name, auto:(S.shot==="auto"),
     dial:Math.round(R.dial), power:Math.round(R.power*100), measured:R.measured,
-    target:S.dist, elevFt:S.elev, windMph:S.wind, windDir:S.windDir, windTx:wd.tx,
+    target:S.dist, elevFt:S.elev, windMph:S.wind, windDir:S.windDir, windTx:wd.tx, loft:S.loft,
     lieLo:S.lieLo, lieHi:S.lieHi, land:S.land, landName:landSurf.name,
     gspeed:(S.land==="green"||S.land==="fringe")?S.gspeed:null,
     pred:{carry:r1(R.mid.carry), roll:r1(R.mid.roll), stop:r1(R.mid.stop),
@@ -1179,7 +1278,9 @@ function compute(){
    corrected table shipped in a later version, which is the reverse of
    what those tables are for.
    ================================================================ */
-var LS_CALIB="playslike.calib.v1";
+/* v2: v1 stored every value whenever any one was touched. See saveCalib. */
+var LS_CALIB="playslike.calib.v2";
+var LS_CALIB_V1="playslike.calib.v1";
 var LS_LOG  ="playslike.log.v1";
 var LS_SUGG ="playslike.sugg.v1";
 
@@ -1264,12 +1365,36 @@ function applyCalib(){
   LEARNED=c.learned||{};
 }
 
+/* ONLY what differs from the shipped tables is stored.
+
+   v1 wrote every value out whenever any single one was touched, so the
+   first edit froze a copy of that release's defaults into storage - and
+   from then on those stale copies outranked anything better that shipped
+   later. The measured green-roll numbers landed underneath a saved set of
+   the guesses they replaced and were invisible. A saved value should mean
+   "the person chose this", not "the app happened to be showing this".
+
+   Storing diffs makes an untouched value follow the shipped table for
+   good, and keeps a real edit for good. */
 function saveCalib(){
   var c={bag:{},land:{},shots:{},rates:{},windows:WIN_OVERRIDE,learned:LEARNED};
-  BAG.forEach(function(club){ var o={}; BAG_FIELDS.forEach(function(f){o[f]=club[f];}); c.bag[club.name]=o; });
-  LANDING.forEach(function(l){ c.land[l.key]=l.mult; });
-  SHOTS.forEach(function(s){ var o={}; SHOT_FIELDS.forEach(function(f){o[f]=s[f];}); c.shots[s.key]=o; });
-  RATE_IDS.forEach(function(id){ c.rates[id]=parseFloat($(id).value)||0; });
+  BAG.forEach(function(club){
+    var d=DEFAULTS.bag[club.name], o={};
+    if(d) BAG_FIELDS.forEach(function(f){ if(club[f]!==d[f]) o[f]=club[f]; });
+    if(Object.keys(o).length) c.bag[club.name]=o;
+  });
+  LANDING.forEach(function(l){
+    if(l.mult!==DEFAULTS.land[l.key]) c.land[l.key]=l.mult;
+  });
+  SHOTS.forEach(function(sh){
+    var d=DEFAULTS.shots[sh.key], o={};
+    if(d) SHOT_FIELDS.forEach(function(f){ if(sh[f]!==d[f]) o[f]=sh[f]; });
+    if(Object.keys(o).length) c.shots[sh.key]=o;
+  });
+  RATE_IDS.forEach(function(id){
+    var v=parseFloat($(id).value)||0;
+    if(v!==DEFAULTS.rates[id]) c.rates[id]=v;
+  });
   lsSet(LS_CALIB,c);
 }
 
@@ -1532,6 +1657,13 @@ function suggestions(){
   var log=getLog(), out=[];
   var flat=function(e){ return !e.elevFt; };
   var calm=function(e){ return !e.windYd; };
+  /* A lofted shot carries a roll multiplier measured on ONE club, so it
+     cannot testify about green roll; and its carry sits on a fitted line
+     rather than a flat number, so an error there might be the loft model
+     rather than the rate under test. Same discipline as a shot with both
+     wind and elevation: it teaches neither. Entries logged before the
+     control existed have no loft and count as neutral. */
+  var plain=function(e){ return !e.loft; };
 
   /* A shot logged BEFORE a value was accepted was scored against the
      old value, so it cannot testify about the new one. Without this
@@ -1550,7 +1682,9 @@ function suggestions(){
     var rows=log.filter(function(e){
       return e.club===club.name && (e.land==="green"||e.land==="fringe") &&
              e.pred && e.pred.roll>=1 && e.gr>0 && (e.actStop-e.actLand)>=0 &&
-             followedPlan(e) && e.ts>since("gr:"+club.name);
+             /* a club that measures 0.00 green roll cannot be corrected by
+                scaling - there is nothing to scale - so it never proposes */
+             followedPlan(e) && plain(e) && e.ts>since("gr:"+club.name);
     });
     if(rows.length<SUGG_MIN) return;
     var actual=0, predicted=0;
@@ -1582,7 +1716,7 @@ function suggestions(){
   [["cHeadFull"],["cHeadApp"],["cTail"]].forEach(function(pair){
     var id=pair[0];
     var rows=log.filter(function(e){
-      return e.rateId===id && flat(e) && e.headMph && followedPlan(e) &&
+      return e.rateId===id && flat(e) && e.headMph && followedPlan(e) && plain(e) &&
              e.ts>since("rate:"+id); });
     if(rows.length<SUGG_MIN) return;
     var trueCost=0, mph=0, errSum=0;
@@ -1609,7 +1743,7 @@ function suggestions(){
      normalising each row against the direction it played, so a mixed
      sample cannot cancel itself out to nonsense. */
   var erows=log.filter(function(e){
-    return e.elevFt && calm(e) && e.elevYd && followedPlan(e) &&
+    return e.elevFt && calm(e) && e.elevYd && followedPlan(e) && plain(e) &&
            e.ts>since("rate:cElev"); });
   if(erows.length>=SUGG_MIN){
     var absFt=0, trueYd=0, esum=0;
@@ -1643,7 +1777,7 @@ function suggestions(){
      - and those are read straight off the game screen, so this surfaces
      as a note with no Accept button. The model does not get to
      overwrite measured data on its own say-so. */
-  var base=log.filter(function(e){ return calm(e) && flat(e) && followedPlan(e); });
+  var base=log.filter(function(e){ return calm(e) && flat(e) && followedPlan(e) && plain(e); });
   if(base.length>=SUGG_MIN){
     var m=0; base.forEach(function(e){ m+=(e.actLand-e.pred.carry); });
     m=r1(m/base.length);
@@ -1841,9 +1975,14 @@ function probeStore(){
    top of them - otherwise "reset to defaults" would restore whatever
    was last saved, which is the opposite of the point. */
 captureDefaults();
+/* The v1 blob cannot be migrated: it recorded chosen values and shipped
+   values identically, so there is no way to tell which was which. It is
+   dropped rather than guessed at. The shot log is under its own key and
+   is untouched. */
+lsDel(LS_CALIB_V1);
 applyCalib();
 
-buildSurf(); buildCompass(); buildLandChips(); buildGsChips(); buildShotChips();
+buildSurf(); buildCompass(); buildLandChips(); buildGsChips(); buildShotChips(); buildLoftChips();
 buildBag(); buildShotRows(); buildLandRows();
 
 RATE_IDS.forEach(function(id){ $(id).addEventListener("input",saveCalib); });

@@ -62,7 +62,16 @@ first one some club actually fits. Order it by **which shot you would reach for*
 ceiling — ceiling order put Long knockdown ahead of Approach and returned a 7 Iron at 46% power
 for a 60 yd shot. If the shot was chosen by hand, it is honoured and the warning stands.
 
-**3. A measured window outranks the `clubs` class list.** `clubAllowed()` lets a club play a
+**3a. Observed non-existence outranks everything, measured windows included.** `NOT_OFFERED`
+and `ONLY_FROM` hold compatibility read off the game during live testing: Driver has no
+Approach; 3 Iron has no Recovery and no Chip; 3 Iron Long knockdown is fairway-only; 9 Iron has
+no Long knockdown, no Splash, and no Punch from sand. If the game does not offer a pairing, no
+window for it can be real.
+
+**Whether the 5 and 7 Irons also lack Recovery and Chip is UNVERIFIED. Do not generalise it
+from the 3 Iron** — those pairings are deliberately still allowed.
+
+**3b. A measured window outranks the `clubs` class list.** `clubAllowed()` lets a club play a
 shot if its class is allowed **or** it has a measured window for that pairing — because somebody
 read that pair off the screen, which is proof the game offers it. The hand-written class lists
 were wrong in ten places: PW is classed `iron`, so every short-game window measured on it
@@ -82,6 +91,86 @@ Widening inside a single shot — the first version — returned a Chip with a 5
 window for a 58 yd shot, because Chip sits earlier on the ladder than Pitch. **A real window on a
 later shot beats a guessed one on an earlier shot, every time.** On a fairway every answer from
 20 to 260 yd now rests on a measured window: no estimates, no out-of-range.
+
+---
+
+## Green roll — five measured, eight interpolated
+
+`green roll = green roll distance ÷ fairway roll distance`, same club, same session, from
+paired fairway→fairway and fairway→green runs.
+
+| Club | gr | Source |
+| --- | --- | --- |
+| Driver | 1.25 | **MEASURED** — 25/20 |
+| 3 Iron | 1.10 | **MEASURED** — 23/21 |
+| 7 Iron | 0.56 | **MEASURED** — green run against its logged fairway ratio |
+| 9 Iron | 0.27 | **MEASURED** — 3/11 |
+| 60° | 0.00 | **MEASURED** — green run against its logged fairway ratio |
+
+The other eight are **interpolated linearly on max carry** between those five points and carry
+`grSrc:"INTERP"`, so they read as estimates everywhere provenance is shown. Interpolated is
+derived, not observed. They replaced a set of guesses, and most moved a long way — the short
+irons and wedges check up far harder than the old numbers assumed.
+
+**The 60° measures 0.00 and does not release at all.** `fly()` must not write `club.gr||1`:
+`0||1` is `1`, which would turn the flattest club in the bag into the rolliest. Only a *missing*
+value falls back to 1. The learning pass also cannot propose a correction to a 0.00 — there is
+nothing to scale — so that club never generates a green-roll suggestion.
+
+---
+
+## Loft
+
+Five positions; Neutral is the default and changes nothing. Effect on carry is a percentage,
+fitted linearly on the club's max carry:
+
+```
+full low  = -6.3% + (max carry - 95) * (5.6/195)
+full high = +3.2% - (max carry - 95) * (3.2/195)
+half positions = half the full value
+```
+
+giving −6.3/+3.2 on the 60°, −4.1/+1.9 on the 7 Iron, −0.7/0 on the Driver.
+
+**The line was fit on the 60° and the Driver, with the 7 Iron deliberately held back as
+validation.** It lands within 0.3%: measured −4.1%/+2.4% against predicted −4.1%/+1.9%. That
+hold-out is why the line is trusted across clubs it was never fitted to.
+
+Roll is a weaker, separate claim: measured on the **7 Iron only** — full high 4 yd against 5
+neutral, full low 6 — so roughly 0.8× and 1.2×, half positions halved. One club is not a curve.
+It is an estimate and is labelled one.
+
+A shot logged with a non-neutral loft **teaches the model nothing**: its roll rests on that
+one-club estimate, and a carry error might be the loft line rather than the rate under test.
+Same discipline as a shot with both wind and elevation.
+
+---
+
+## Spin — deliberately not modelled
+
+The two clubs tested **disagree on direction**. On the 60°, backspin costs 7% of carry and
+topspin adds 4%. On the 7 Iron, backspin holds carry and topspin costs 3%. Averaging those
+produces a number wrong for both clubs, so there is no spin control and no carry term. Do not
+add one from these two points.
+
+The roll effect *is* consistent and is recorded here for when a third club is measured:
+backspin ≈ 0.4× roll on a 7 Iron and 0.9× on a Driver, topspin ≈ 1.35× on both, scaling with
+loft as everything else does. If a control is ever added it must apply roll only, leave carry
+untouched, and say it is incomplete.
+
+---
+
+## Storage stores only what you changed
+
+`saveCalib()` writes a value **only if it differs from the shipped table**. v1 wrote everything
+out whenever any single field was touched, so the first edit froze a copy of that release's
+defaults into storage — and those stale copies then outranked anything better that shipped
+later. The measured green-roll numbers landed underneath a saved set of the guesses they
+replaced and were completely invisible until the key was bumped.
+
+A saved value must mean *"the person chose this"*, never *"the app happened to be showing
+this"*. The v1 blob recorded both identically, so it cannot be migrated and is dropped on boot;
+the shot log lives under its own key and is untouched.
 
 ---
 
