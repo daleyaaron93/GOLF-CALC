@@ -136,6 +136,33 @@ giving −6.3/+3.2 on the 60°, −4.1/+1.9 on the 7 Iron, −0.7/0 on the Drive
 validation.** It lands within 0.3%: measured −4.1%/+2.4% against predicted −4.1%/+1.9%. That
 hold-out is why the line is trusted across clubs it was never fitted to.
 
+### Auto loft prescribes; it does not just accept
+
+Loft defaults to **Auto**, and Auto answers one question: *how much height do I need to ADD.*
+It starts at Neutral and steps up only until the worst-case carry clears the hazard, using the
+same `haz + 2` threshold the hazard warning uses — so the recommendation and the warning can
+never contradict each other.
+
+**Do not "maximise the margin" instead.** On the fitted line a higher flight always carries at
+least as far as neutral *and* rolls less (0.8×), so maximising would answer Full high every
+single time and tell a person nothing. Least intervention is what makes the answer informative.
+
+Only upward is searched. On the same line a lower flight always carries less, so it can never
+rescue a carry that could not already be made. Low stays a manual choice — it is for flighting
+under something, which this model does not represent.
+
+The reason is printed under the prescription whenever Auto moves off Neutral, and when nothing
+clears it says so rather than silently showing the best of a bad set.
+
+### Why there is no spin recommendation
+
+Reducing rollout by adding backspin is the obvious companion move, and it is **deliberately not
+offered**. Spin's carry effect is unknown — the two clubs tested disagree on its direction — and
+on the 60° backspin costs 7% of carry. Recommending backspin to stop the ball sooner could
+therefore take 7% off the carry and put the ball in the very hazard the recommendation was
+trying to clear. The roll effect alone is not enough to advise on; it needs the carry term, and
+that needs a third club.
+
 Roll is a weaker, separate claim: measured on the **7 Iron only** — full high 4 yd against 5
 neutral, full low 6 — so roughly 0.8× and 1.2×, half positions halved. One club is not a curve.
 It is an estimate and is labelled one.

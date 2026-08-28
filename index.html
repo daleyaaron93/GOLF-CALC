@@ -166,6 +166,9 @@
   .fl.stop .n{color:var(--brass-br);}
   .fl .l{font-family:var(--sans);font-size:8.5px;letter-spacing:.28em;color:var(--brass-lt);
     text-transform:uppercase;display:block;margin-top:5px;}
+  .why{margin-top:12px;font-family:var(--serif);font-style:italic;font-size:15px;
+    color:var(--brass-lt);display:none;line-height:1.5;}
+  .why.show{display:block;}
   .aim{margin-top:16px;font-family:var(--serif);font-size:17px;color:var(--brass-br);display:none;}
   .aim.show{display:block;}
   /* warn + alts carry the provenance/caution signal — kept loud on purpose */
@@ -347,7 +350,7 @@
     </div>
 
     <div class="field">
-      <div class="flabel"><span>Loft</span><span class="hint">the vertical bar, not the ball</span></div>
+      <div class="flabel"><span>Loft</span><span class="hint">auto adds only what you need</span></div>
       <div class="chip-grid" id="loftChips"></div>
     </div>
 
@@ -484,7 +487,9 @@
       <div class="prescribe">
         <div class="px"><span class="n" id="shotRx">Approach</span><span class="l">Shot</span></div>
         <div class="px"><span class="n" id="shapeRx">Straight</span><span class="l">Shape</span></div>
+        <div class="px"><span class="n" id="loftRx">Neutral</span><span class="l">Loft</span></div>
       </div>
+      <div class="why" id="loftWhy"></div>
 
       <div class="flight">
         <div class="fl"><span class="n" id="landOut">143</span><span class="l">Lands</span></div>
@@ -749,7 +754,7 @@ var LANDING=[
 ];
 
 var S={dist:150,haz:0,lieLo:98,lieHi:99,elev:0,elevUp:true,wind:0,windDir:"none",
-       shot:"auto",land:"green",from:"turf",gspeed:"avg",loft:0};
+       shot:"auto",land:"green",from:"turf",gspeed:"avg",loft:"auto"};
 
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
@@ -800,7 +805,7 @@ function buildCompass(){
 }
 function buildLoftChips(){
   var el=$("loftChips"); el.innerHTML="";
-  LOFTS.forEach(function(l){
+  [{v:"auto",name:"Auto"}].concat(LOFTS).forEach(function(l){
     var d=document.createElement("div");
     d.className="chip"+(S.loft===l.v?" active":"");
     d.textContent=l.name;
@@ -927,7 +932,7 @@ $("udDown").onclick=function(){S.elevUp=false;$("udDown").classList.add("active"
 $("btnReset").onclick=function(){
   ["fHaz","fElev","fWind","fLieLo","fLieHi"].forEach(function(id){$(id).value="";});
   S.windDir="none"; S.shot="auto"; S.elevUp=true; S.land="green";
-  S.from="turf"; S.gspeed="avg"; S.loft=0;
+  S.from="turf"; S.gspeed="avg"; S.loft="auto";
   $("udUp").classList.add("active"); $("udDown").classList.remove("active");
   buildSurf(); buildCompass(); buildShotChips(); buildLandChips(); buildGsChips();
   buildLoftChips();
@@ -1061,7 +1066,7 @@ function compute(){
 
   /* Everything from here down depends on WHICH shot is being played, so
      it is wrapped up and can be run for more than one candidate. */
-  function attempt(shot,widen){
+  function attempt(shot,widen,loftPos){
   var headMph=wd.head*S.wind*qf*shot.windMult;
   /* LEGAL is the hard rule: right class of club, and the Driver only off
      a tee. It is never relaxed. */
@@ -1087,7 +1092,7 @@ function compute(){
      where does the ball land and stop? */
   function fly(D,L,ratio,club){
     var carry=D*(L/100);
-    carry*=1+loftCarryPct(club,S.loft)/100;
+    carry*=1+loftCarryPct(club,loftPos)/100;
     carry-=elevCost;
     /* Which rate fired, and what it cost, is recorded on the way out.
        The shot log reads these off the result rather than re-deriving
@@ -1109,7 +1114,7 @@ function compute(){
        the bag into the rolliest. Only a missing value falls back to 1. */
     var grV=(club.gr===0||club.gr>0)?club.gr:1;
     var gr=(S.land==="green"||S.land==="fringe")?grV:1;
-    var roll=(shot.roll>0?shot.roll:carry*ratio)*landMult*gr*loftRollMult(S.loft);
+    var roll=(shot.roll>0?shot.roll:carry*ratio)*landMult*gr*loftRollMult(loftPos);
     return {carry:carry,roll:roll,stop:carry+roll,
             rateId:rateId,windYd:windYd,elevYd:elevCost,gr:gr};
   }
@@ -1165,38 +1170,74 @@ function compute(){
      handed back a Chip with a 5 Iron on a guessed window for a 58 yd shot,
      because Chip came earlier on the ladder than Pitch. A real window on a
      later shot beats a guessed one on an earlier shot, every time. */
-  var res;
-  if(S.shot==="auto"){
-    var ladder=autoLadder(S.dist,S.wind,lieMid), li;
-    for(li=0; li<ladder.length; li++){
-      res=attempt(ladder[li],false);
-      if(res.fits.length) break;
-    }
-    if(!res.fits.length)
+  function selectFor(loftPos){
+    var res;
+    if(S.shot==="auto"){
+      var ladder=autoLadder(S.dist,S.wind,lieMid), li;
       for(li=0; li<ladder.length; li++){
-        res=attempt(ladder[li],true);
+        res=attempt(ladder[li],false,loftPos);
         if(res.fits.length) break;
       }
-    /* Nothing reaches at all: report against the shot actually wanted,
-       not whatever happened to be last in the list. */
-    if(!res.fits.length) res=attempt(ladder[0],true);
+      if(!res.fits.length)
+        for(li=0; li<ladder.length; li++){
+          res=attempt(ladder[li],true,loftPos);
+          if(res.fits.length) break;
+        }
+      /* Nothing reaches at all: report against the shot actually wanted,
+         not whatever happened to be last in the list. */
+      if(!res.fits.length) res=attempt(ladder[0],true,loftPos);
+    } else {
+      /* A shot chosen by hand is never swapped, but it may still need an
+         estimated window - that is the bunker case, where one filled-in
+         club must not strand the rest. */
+      var picked=SHOTS.filter(function(s){return s.key===S.shot;})[0];
+      res=attempt(picked,false,loftPos);
+      if(!res.fits.length) res=attempt(picked,true,loftPos);
+    }
+    res.loft=loftPos;
+    res.R=res.fits[0];
+    res.warn="";
+    if(!res.R){
+      res.R=res.solved.slice()
+            .sort(function(a,b){return Math.abs(a.power-.9)-Math.abs(b.power-.9);})[0];
+      res.warn=res.solved.every(function(r){return r.dial>r.mc;})
+        ?"Out of range \u2014 nothing reaches. Lay up."
+        :"Falls in a gap \u2014 no club dials that number. Closest shown.";
+    }
+    return res;
+  }
+
+  /* AUTO LOFT - the LEAST height that gets the ball over the carry
+     hazard, not the most.
+
+     On the fitted line a higher flight always carries at least as far as
+     neutral AND rolls less (0.8x), so "pick the biggest margin" would
+     answer Full high every single time and tell a person nothing. The
+     question actually being asked is "how much do I need to ADD", so the
+     search starts at Neutral and stops at the first setting that clears.
+
+     Only upward is searched: on the same line a lower flight always
+     carries less, so it can never rescue a carry that could not already
+     be made. Low stays a manual choice - it is for flighting under
+     something, which this model does not represent.
+
+     The threshold is the same haz+2 the hazard warning uses, so the
+     recommendation and the warning can never contradict each other. */
+  var loftAuto=(S.loft==="auto"), res, loftPos, loftForced=false;
+  if(loftAuto){
+    var order=[0,1,2];
+    for(var lp=0; lp<order.length; lp++){
+      loftPos=order[lp];
+      res=selectFor(loftPos);
+      if(!(S.haz>0)) break;                       /* nothing to clear */
+      if(res.R && res.R.worst.carry>=S.haz+2){ loftForced=(loftPos!==0); break; }
+    }
   } else {
-    /* A shot chosen by hand is never swapped, but it may still need an
-       estimated window - that is the bunker case, where one filled-in
-       club must not strand the rest. */
-    var picked=SHOTS.filter(function(s){return s.key===S.shot;})[0];
-    res=attempt(picked,false);
-    if(!res.fits.length) res=attempt(picked,true);
+    loftPos=S.loft;
+    res=selectFor(loftPos);
   }
   var shot=res.shot, headMph=res.headMph, solved=res.solved, fits=res.fits;
-
-  var R=fits[0], warn="";
-  if(!R){
-    R=solved.slice().sort(function(a,b){return Math.abs(a.power-.9)-Math.abs(b.power-.9);})[0];
-    warn=solved.every(function(r){return r.dial>r.mc;})
-      ?"Out of range \u2014 nothing reaches. Lay up."
-      :"Falls in a gap \u2014 no club dials that number. Closest shown.";
-  }
+  var R=res.R, warn=res.warn;
 
   var aimYd=0,aimDir="",shapeRx="Straight";
   var crossMph=Math.abs(wd.cross)*S.wind*qf*shot.windMult;
@@ -1224,6 +1265,19 @@ function compute(){
   $("powerFill").style.width=Math.min(100,pw)+"%";
   $("shotRx").textContent=shot.name;
   $("shapeRx").textContent=shapeRx;
+  var loftName=LOFTS.filter(function(l){return l.v===loftPos;})[0].name;
+  $("loftRx").textContent=loftName;
+  var why=$("loftWhy");
+  if(loftAuto && loftForced){
+    why.classList.add("show");
+    why.textContent="Flighted up to "+loftName.toLowerCase()+" to carry the "+S.haz+
+      " yd hazard \u2014 it lands "+Math.round(R.worst.carry)+" at worst and still stops on "+
+      S.dist+".";
+  } else if(loftAuto && S.haz>0 && R && R.worst.carry<S.haz+2){
+    why.classList.add("show");
+    why.textContent="No amount of height carries the "+S.haz+
+      " yd hazard with this club. Shown at full high.";
+  } else why.classList.remove("show");
 
   function rng(a,b){
     var lo=Math.round(a),hi=Math.round(b);
@@ -1254,7 +1308,7 @@ function compute(){
   if(S.wind) bits.push(S.wind+" mph "+wd.tx.toLowerCase());
   bits.push("lie "+S.lieLo+"\u2013"+S.lieHi+"%");
   bits.push("lands on "+landSurf.name.toLowerCase());
-  if(S.loft) bits.push((LOFTS.filter(function(l){return l.v===S.loft;})[0].name)+" loft");
+  if(loftPos) bits.push(loftName.toLowerCase()+" loft");
   if(S.haz) bits.push("carry "+S.haz);
   if(spread>=2) bits.push(Math.round(spread)+" yd lie spread");
   $("recapRow").textContent=bits.join("  \u00B7  ");
@@ -1265,7 +1319,7 @@ function compute(){
   LAST={
     club:R.club.name, shotKey:shot.key, shotName:shot.name, auto:(S.shot==="auto"),
     dial:Math.round(R.dial), power:Math.round(R.power*100), measured:R.measured,
-    target:S.dist, elevFt:S.elev, windMph:S.wind, windDir:S.windDir, windTx:wd.tx, loft:S.loft,
+    target:S.dist, elevFt:S.elev, windMph:S.wind, windDir:S.windDir, windTx:wd.tx, loft:loftPos, loftAuto:loftAuto,
     lieLo:S.lieLo, lieHi:S.lieHi, land:S.land, landName:landSurf.name,
     gspeed:(S.land==="green"||S.land==="fringe")?S.gspeed:null,
     pred:{carry:r1(R.mid.carry), roll:r1(R.mid.roll), stop:r1(R.mid.stop),
