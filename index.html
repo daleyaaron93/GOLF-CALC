@@ -896,6 +896,32 @@ function autoShot(dist,wind,lieMid){
    with every wedge in the bag, so 65-95 yd on Auto reported "nothing
    reaches" with an Approach sitting right there. Ordered shortest reach
    first, so Auto escalates by the smallest step that works. */
+/* A measured window IS proof the game offers that pairing - somebody read
+   it off the screen. So a measured pair outranks the hand-written `clubs`
+   class list, which was wrong in ten places: PW is classed as an iron, so
+   every short-game window measured on it (Pitch 60/12, Spinner 56/29,
+   Flop, Super flop, Thai) was locked out, and Runner was measured on five
+   irons while the shot allowed wedges only. Runner/8 Iron [68,15] and
+   Pitch/PW [60,12] both cover 59-66 yd - the "gap" was measured data the
+   class list was refusing to look at.
+
+   Reclassifying PW would not fix it: PW carries wedge windows AND is
+   wanted for iron-only shots like Punch. It genuinely straddles, which is
+   why the data gets to decide rather than the label.
+
+   The Driver rule is NOT relaxed - that is a rule about play, not a gap
+   in the data. */
+function hasMeasuredWindow(club,shot){
+  var w=WINDOWS[club.name], p=w&&w[shot.key];
+  return !!(p && p[0]>0 && p[1]>0);
+}
+function clubAllowed(club,shot){
+  var teeOnly={tee:1,pdrive:1,sting:1,choket:1,deck:1,auto:1};
+  if(club.driver && !teeOnly[shot.key]) return false;
+  if(shot.clubs.indexOf(club.cls)>=0) return true;
+  return hasMeasuredWindow(club,shot);
+}
+
 function autoLadder(dist,wind,lieMid){
   var first=autoShot(dist,wind,lieMid), out=[first];
   /* Ordered by which shot you would actually reach for, NOT by reach
@@ -923,19 +949,13 @@ function compute(){
   var gs=GREENSPEED.filter(function(g){return g.key===S.gspeed;})[0];
   if(S.land==="green"||S.land==="fringe") landMult*=gs.mult;
 
-  var teeOnly={tee:1,pdrive:1,sting:1,choket:1,deck:1,auto:1};
-
   /* Everything from here down depends on WHICH shot is being played, so
      it is wrapped up and can be run for more than one candidate. */
-  function attempt(shot){
+  function attempt(shot,widen){
   var headMph=wd.head*S.wind*qf*shot.windMult;
   /* LEGAL is the hard rule: right class of club, and the Driver only off
      a tee. It is never relaxed. */
-  var legal=BAG.filter(function(c){
-    if(shot.clubs.indexOf(c.cls)<0) return false;
-    if(c.driver && !teeOnly[shot.key]) return false;
-    return true;
-  });
+  var legal=BAG.filter(function(c){ return clubAllowed(c,shot); });
   /* USABLE narrows that to clubs with a measured window for this shot. */
   var usable=legal.filter(function(c){
     var w=WINDOWS[c.name];
@@ -1011,7 +1031,7 @@ function compute(){
      club and the rest drop out - so filling in real data made the answer
      worse. If nothing measured fits, widen to every LEGAL club on
      estimated windows, flagged on the card as always. */
-  if(!fits.length && usable.length<legal.length){
+  if(widen && !fits.length && usable.length<legal.length){
     solved=legal.map(solve);
     fits=solved.filter(function(r){return r.inRange;})
                .sort(function(a,b){return a.mc-b.mc;});
@@ -1023,18 +1043,35 @@ function compute(){
      produce. An explicitly chosen shot is never substituted - if you ask
      for a Pitch from 95 yd you get told it does not reach, rather than
      being quietly handed something else. */
+  /* Two passes, and the order matters. Pass one walks the whole ladder on
+     MEASURED windows only. Only if no shot on the ladder can be played
+     with a measured club does pass two walk it again allowing estimated
+     ones. Widening inside a single shot instead - the first thing I built -
+     handed back a Chip with a 5 Iron on a guessed window for a 58 yd shot,
+     because Chip came earlier on the ladder than Pitch. A real window on a
+     later shot beats a guessed one on an earlier shot, every time. */
   var res;
   if(S.shot==="auto"){
-    var ladder=autoLadder(S.dist,S.wind,lieMid);
-    for(var li=0; li<ladder.length; li++){
-      res=attempt(ladder[li]);
+    var ladder=autoLadder(S.dist,S.wind,lieMid), li;
+    for(li=0; li<ladder.length; li++){
+      res=attempt(ladder[li],false);
       if(res.fits.length) break;
     }
-    /* Nothing on the ladder reaches: report against the shot actually
-       wanted, not against whatever happened to be last in the list. */
-    if(!res.fits.length) res=attempt(ladder[0]);
+    if(!res.fits.length)
+      for(li=0; li<ladder.length; li++){
+        res=attempt(ladder[li],true);
+        if(res.fits.length) break;
+      }
+    /* Nothing reaches at all: report against the shot actually wanted,
+       not whatever happened to be last in the list. */
+    if(!res.fits.length) res=attempt(ladder[0],true);
   } else {
-    res=attempt(SHOTS.filter(function(s){return s.key===S.shot;})[0]);
+    /* A shot chosen by hand is never swapped, but it may still need an
+       estimated window - that is the bunker case, where one filled-in
+       club must not strand the rest. */
+    var picked=SHOTS.filter(function(s){return s.key===S.shot;})[0];
+    res=attempt(picked,false);
+    if(!res.fits.length) res=attempt(picked,true);
   }
   var shot=res.shot, headMph=res.headMph, solved=res.solved, fits=res.fits;
 
@@ -1274,12 +1311,10 @@ var WIN_OVERRIDE={};      /* club -> shotKey -> [max,min], typed by hand */
 var WIN_FILTER="all";
 
 function shotsForClub(club){
-  var teeOnly={tee:1,pdrive:1,sting:1,choket:1,deck:1,auto:1};
+  /* Same predicate the model uses, so the editor can never list a pairing
+     the model refuses to consider, or hide one it would. */
   return SHOTS.filter(function(sh){
-    if(sh.key==="auto") return false;
-    if(sh.clubs.indexOf(club.cls)<0) return false;
-    if(club.driver && !teeOnly[sh.key]) return false;
-    return true;
+    return sh.key!=="auto" && clubAllowed(club,sh);
   });
 }
 function winPair(clubName,key){

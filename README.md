@@ -62,9 +62,26 @@ first one some club actually fits. Order it by **which shot you would reach for*
 ceiling — ceiling order put Long knockdown ahead of Approach and returned a 7 Iron at 46% power
 for a 60 yd shot. If the shot was chosen by hand, it is honoured and the warning stands.
 
-**3. A remaining data gap, not a bug: 59–66 yd.** Pitch tops out at 58 and the shortest
-measured Approach (60°) has a *minimum* of 67, so nothing natural covers the gap and Auto falls
-to a Long knockdown. Measuring a wedge Runner or a longer Pitch window would close it.
+**3. A measured window outranks the `clubs` class list.** `clubAllowed()` lets a club play a
+shot if its class is allowed **or** it has a measured window for that pairing — because somebody
+read that pair off the screen, which is proof the game offers it. The hand-written class lists
+were wrong in ten places: PW is classed `iron`, so every short-game window measured on it
+(Pitch 60/12, Spinner 56/29, Flop, Super flop, Thai) was locked out, and Runner was measured on
+five irons while the shot allowed wedges only.
+
+Reclassifying PW does not fix it — PW carries wedge windows *and* is wanted for iron-only shots
+like Punch. It genuinely straddles, which is why the data decides and not the label. The Driver
+rule is **not** relaxed by this: that is a rule about play, not a gap in the data.
+
+This closed what looked like a 59–66 yd hole. It was never a hole — Runner/9 Iron `[64,14]` and
+Pitch/PW `[60,12]` were measured and sitting in the table, refused by the class list.
+
+**4. The estimated-window widening is a LAST RESORT ACROSS THE LADDER, not per shot.** Pass one
+walks the whole ladder on measured windows only; pass two walks it again allowing estimates.
+Widening inside a single shot — the first version — returned a Chip with a 5 Iron on a guessed
+window for a 58 yd shot, because Chip sits earlier on the ladder than Pitch. **A real window on a
+later shot beats a guessed one on an earlier shot, every time.** On a fairway every answer from
+20 to 260 yd now rests on a measured window: no estimates, no out-of-range.
 
 ---
 
