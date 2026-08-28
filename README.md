@@ -41,6 +41,33 @@ sight. Verified in-browser: `S.dist=150; S.wind=14; S.from='turf'` now returns
 
 ---
 
+## Club selection — three rules that must hold
+
+**1. LEGAL is never relaxed.** `attempt()` builds `legal` (right club class; Driver only off a
+tee) and then narrows it to `usable` (has a measured window for this shot). When `usable`
+comes back empty it falls back to **`legal`**, on estimated windows, which the card flags.
+
+It used to fall back to `BAG.slice()` — the whole bag — which discarded the class rule and the
+Driver rule together. Every bunker shot has an unmeasured window on every wedge, so every
+bunker shot emptied `usable` and got handed the full bag: **a Driver out of the sand at 150%
+power with "Out of range — nothing reaches" printed under it.** Never widen a fallback past
+the rule it is meant to respect.
+
+**2. Auto walks a ladder; an explicit shot never gets substituted.** `autoShot()`'s distance
+bands describe the shot you would *want*, and say nothing about whether any club can dial the
+number. Pitch's band ran to 100 yd while Pitch tops out at **58 yd** with every wedge in the
+bag, so 65–95 yd on Auto reported "nothing reaches" with an Approach sitting right there.
+`autoLadder()` now returns that first choice followed by fallbacks, and `compute()` takes the
+first one some club actually fits. Order it by **which shot you would reach for**, not by reach
+ceiling — ceiling order put Long knockdown ahead of Approach and returned a 7 Iron at 46% power
+for a 60 yd shot. If the shot was chosen by hand, it is honoured and the warning stands.
+
+**3. A remaining data gap, not a bug: 59–66 yd.** Pitch tops out at 58 and the shortest
+measured Approach (60°) has a *minimum* of 67, so nothing natural covers the gap and Auto falls
+to a Long knockdown. Measuring a wedge Runner or a longer Pitch window would close it.
+
+---
+
 ## Data provenance — do not overwrite these
 
 | Table | Status |
@@ -230,6 +257,13 @@ stored as context and is never read by the learning pass.
 and `compute()` stashes the lot in `LAST`. The log reads those off the result rather than
 re-deriving them — re-deriving is how a learning pass ends up correcting a rate that never
 ran on that shot.
+
+**What you actually hit.** Two pickers on the log panel default to the prescribed club and
+shot and turn brass the moment they differ. An overruled shot is logged and exported in full,
+marked *your pick* in the list — but `followedPlan()` keeps it out of the learning pass, because
+the prediction stored on the entry was worked out for the prescribed club and dial. Scoring a
+5 Iron result against a Driver prediction measures nothing. Entries written before the pickers
+existed have no `actClub` and are treated as prescribed.
 
 **Export** writes a JSON file (`playslike-log-YYYY-MM-DD.json`) so a season is not one
 settings reset from gone. Individual entries can be deleted from the drawer, which is the

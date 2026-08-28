@@ -229,6 +229,20 @@
   .logpanel.on{display:block;}
   .logerr{font-family:var(--serif);font-size:14.5px;line-height:1.5;color:#8f4f22;
     padding:0 2px 8px;display:none;}
+  .logpick{display:flex;gap:12px;}
+  .logpick select{flex:1;min-width:0;}
+  /* padding-right is set AFTER the shorthand on purpose: the shorthand
+     would otherwise wipe the space reserved for the chevron and the arrow
+     would sit on top of the text. */
+  .sel{width:100%;background-color:transparent;border:1px solid var(--field-edge);
+    border-radius:2px;color:var(--ink);font-family:var(--serif);font-size:16px;
+    padding:12px 10px;min-height:52px;-webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1.5 L6 6.5 L11 1.5' fill='none' stroke='%238d8871' stroke-width='1.6' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 11px center;background-size:11px 7px;
+    padding-right:32px;}
+  .sel:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 1px var(--green);}
+  .sel.changed{border-color:var(--brass);color:var(--brass);}
+  .logrow i{font-family:var(--serif);font-style:italic;font-size:12px;color:var(--brass);}
   .logerr.show{display:block;}
   .logrow{display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:10px;
     letter-spacing:.04em;color:var(--ink-2);padding:9px 2px;border-bottom:1px solid var(--rule-soft);}
@@ -406,7 +420,10 @@
       <summary id="logSummary">Shot log</summary>
       <div class="note">Every logged shot, newest first. The two figures are carry error and
       roll error in yards &mdash; positive means it went further than the model said. Nothing
-      lateral is recorded: distance is the part people judge reliably.</div>
+      lateral is recorded: distance is the part people judge reliably. A shot marked
+      <i>your pick</i> is one where you overruled the recommendation; it is kept and exported
+      in full, but it can&rsquo;t be scored against a prediction made for a different club, so
+      it is left out of the suggestions.</div>
       <div id="logList"></div>
       <button class="reset" id="btnLogExport">Export log (JSON)</button>
     </details>
@@ -464,6 +481,12 @@
           <div class="flabel"><span>Stopped at</span></div>
           <input class="inp" id="fActStop" type="number" inputmode="numeric" placeholder="0">
         </div>
+      </div>
+      <div class="flabel" style="margin-top:2px"><span>What you actually hit</span>
+        <span class="hint">change it if you overruled me</span></div>
+      <div class="logpick">
+        <select class="sel" id="fActClub"></select>
+        <select class="sel" id="fActShot"></select>
       </div>
       <div class="logerr" id="logErr"></div>
       <button class="go" id="btnLogSave">Save to log</button>
@@ -575,20 +598,20 @@ var SHOTS=[
  {key:"pdrive",name:"Power drive",    grp:"Tee",     clubs:["wood"],               from:["tee"],  windMult:1.00,roll:0,  maxPct:1.10, minPct:null, src:"GUESS"},
  {key:"sting", name:"Stinger",        grp:"Tee",     clubs:["wood","iron"],        from:["tee"],  windMult:0.50,roll:0,  maxPct:0.95, minPct:null, src:"GUESS"},
  {key:"choket",name:"Choked tee",     grp:"Tee",     clubs:["wood"],               from:["tee"],  windMult:0.85,roll:0,  maxPct:0.93, minPct:null, src:"GUESS"},
- {key:"appr",  name:"Approach",       grp:"Approach",clubs:["wood","iron","wedge"],from:["tee","turf","rough"],windMult:1.00,roll:0,maxPct:0.98,minPct:null,src:"MEAS"},
- {key:"chokea",name:"Choked approach",grp:"Approach",clubs:["wood","iron","wedge"],from:["tee","turf","rough"],windMult:0.90,roll:0,maxPct:0.93,minPct:null,src:"GUESS"},
+ {key:"appr",  name:"Approach",       grp:"Approach",clubs:["wood","iron","wedge"],from:["tee","turf","rough","sand"],windMult:1.00,roll:0,maxPct:0.98,minPct:null,src:"MEAS"},
+ {key:"chokea",name:"Choked approach",grp:"Approach",clubs:["wood","iron","wedge"],from:["tee","turf","rough","sand"],windMult:0.90,roll:0,maxPct:0.93,minPct:null,src:"GUESS"},
  {key:"deck",  name:"Off the deck",   grp:"Approach",clubs:["wood"],               from:["turf"], windMult:0.80,roll:0,  maxPct:1.00, minPct:null, src:"GUESS"},
- {key:"lknock",name:"Long knockdown", grp:"Short",   clubs:["iron"],               from:["turf","rough"],windMult:0.60,roll:4, maxPct:0.90,minPct:null,src:"MEAS"},
- {key:"pitch", name:"Pitch",          grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.15,roll:8, maxPct:0.495,minPct:0.30,src:"MEAS"},
- {key:"spin",  name:"Spinner",        grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.05,roll:5, maxPct:0.45,minPct:0.25,src:"YOURS"},
- {key:"thai",  name:"Thai spinner",   grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.05,roll:2, maxPct:0.134,minPct:0.103,src:"MEAS"},
- {key:"runner",name:"Runner",         grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.25,roll:16,maxPct:0.45,minPct:0.25,src:"GUESS"},
- {key:"chip",  name:"Chip",           grp:"Short",   clubs:["wedge","iron"],       from:["turf","rough"],windMult:0.10,roll:6, maxPct:0.30,minPct:0.15,src:"GUESS"},
- {key:"recov", name:"Recovery",       grp:"Recovery",clubs:["iron","wedge"],       from:["rough"],windMult:0.70,roll:0,  maxPct:0.85,minPct:null,src:"GUESS"},
- {key:"punch", name:"Punch",          grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough"],windMult:0.50,roll:12,maxPct:0.70,minPct:null,src:"GUESS"},
- {key:"chokep",name:"Choked punch",   grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough"],windMult:0.50,roll:10,maxPct:0.65,minPct:null,src:"GUESS"},
- {key:"flop",  name:"Flop",           grp:"Recovery",clubs:["wedge"],              from:["turf","rough"],windMult:0.30,roll:1, maxPct:0.35,minPct:0.18,src:"YOURS"},
- {key:"sflop", name:"Super flop",     grp:"Recovery",clubs:["wedge"],              from:["turf","rough"],windMult:0.35,roll:0.5,maxPct:0.25,minPct:0.12,src:"GUESS"},
+ {key:"lknock",name:"Long knockdown", grp:"Short",   clubs:["iron"],               from:["turf","rough","sand"],windMult:0.60,roll:4, maxPct:0.90,minPct:null,src:"MEAS"},
+ {key:"pitch", name:"Pitch",          grp:"Short",   clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.15,roll:8, maxPct:0.495,minPct:0.30,src:"MEAS"},
+ {key:"spin",  name:"Spinner",        grp:"Short",   clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.05,roll:5, maxPct:0.45,minPct:0.25,src:"YOURS"},
+ {key:"thai",  name:"Thai spinner",   grp:"Short",   clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.05,roll:2, maxPct:0.134,minPct:0.103,src:"MEAS"},
+ {key:"runner",name:"Runner",         grp:"Short",   clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.25,roll:16,maxPct:0.45,minPct:0.25,src:"GUESS"},
+ {key:"chip",  name:"Chip",           grp:"Short",   clubs:["wedge","iron"],       from:["turf","rough","sand"],windMult:0.10,roll:6, maxPct:0.30,minPct:0.15,src:"GUESS"},
+ {key:"recov", name:"Recovery",       grp:"Recovery",clubs:["iron","wedge"],       from:["rough","sand"],windMult:0.70,roll:0,  maxPct:0.85,minPct:null,src:"GUESS"},
+ {key:"punch", name:"Punch",          grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough","sand"],windMult:0.50,roll:12,maxPct:0.70,minPct:null,src:"GUESS"},
+ {key:"chokep",name:"Choked punch",   grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough","sand"],windMult:0.50,roll:10,maxPct:0.65,minPct:null,src:"GUESS"},
+ {key:"flop",  name:"Flop",           grp:"Recovery",clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.30,roll:1, maxPct:0.35,minPct:0.18,src:"YOURS"},
+ {key:"sflop", name:"Super flop",     grp:"Recovery",clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.35,roll:0.5,maxPct:0.25,minPct:0.12,src:"GUESS"},
  {key:"splash",name:"Splash",         grp:"Bunker",  clubs:["wedge"],              from:["sand"], windMult:0.20,roll:3, maxPct:0.454,minPct:0.20,src:"MEAS"},
  {key:"pick",  name:"Pick",           grp:"Bunker",  clubs:["wedge"],              from:["sand"], windMult:0.20,roll:2, maxPct:0.35,minPct:0.15,src:"GUESS"},
  {key:"ppick", name:"Power pick",     grp:"Bunker",  clubs:["iron"],               from:["sand"], windMult:0.40,roll:5, maxPct:0.60,minPct:0.30,src:"GUESS"},
@@ -739,10 +762,10 @@ function buildBag(){
   BAG.forEach(function(c,i){
     var r=document.createElement("div"); r.className="row";
     r.innerHTML='<span class="lbl">'+c.name+'</span>'+
-      '<input type="number" data-i="'+i+'" data-f="min" value="'+c.min+'" title="min dial">'+
-      '<input type="number" data-i="'+i+'" data-f="max" value="'+c.max+'" title="max dial">'+
+      '<input type="number" data-i="'+i+'" data-f="min" value="'+c.min+'" title="min carry">'+
+      '<input type="number" data-i="'+i+'" data-f="max" value="'+c.max+'" title="max carry">'+
       '<input type="number" data-i="'+i+'" data-f="total" value="'+c.total+'" title="max total">'+
-      '<input type="number" step="0.05" data-i="'+i+'" data-f="gr" value="'+c.gr+'" title="green roll factor">';
+      '<input type="number" step="0.05" data-i="'+i+'" data-f="gr" value="'+c.gr+'" title="green roll">';
     el.appendChild(r);
   });
   el.querySelectorAll("input").forEach(function(i){
@@ -827,7 +850,15 @@ $("btnBack").onclick=function(){
 
 function autoShot(dist,wind,lieMid){
   function g(k){return SHOTS.filter(function(x){return x.key===k;})[0];}
-  if(S.from==="sand") return dist<=60?g("splash"):g("blast");
+  /* Bunker shots only cover the short stuff - a Blast tops out around
+     66 yd even with a PW. Past that you are taking an ordinary swing out
+     of the sand with a longer club, so fall through to the same ladder as
+     turf instead of insisting on a wedge that cannot get there.
+     The 60/80 thresholds are my estimate and Mr Daley's to correct. */
+  if(S.from==="sand"){
+    if(dist<=60) return g("splash");
+    if(dist<=80) return g("blast");
+  }
   if(S.from==="tee")  return wind>=12?g("sting"):g("tee");
   if(dist<=30)  return g("chip");
   if(dist<=60)  return g("spin");
@@ -840,28 +871,68 @@ function autoShot(dist,wind,lieMid){
   return g("appr");
 }
 
+/* The order Auto falls back through when its first choice cannot produce
+   the number. autoShot's bands describe the shot you would WANT at a
+   distance; they say nothing about whether any club can dial it. Pitch is
+   the plain case - its band ran to 100 yd while Pitch tops out at 58 yd
+   with every wedge in the bag, so 65-95 yd on Auto reported "nothing
+   reaches" with an Approach sitting right there. Ordered shortest reach
+   first, so Auto escalates by the smallest step that works. */
+function autoLadder(dist,wind,lieMid){
+  var first=autoShot(dist,wind,lieMid), out=[first];
+  /* Ordered by which shot you would actually reach for, NOT by reach
+     ceiling. Ordering by ceiling put Long knockdown ahead of Approach and
+     handed back a 7 Iron at 46% power for a 60 yd shot - in range, and
+     nobody's idea of the right club. The ordinary swing comes before the
+     specialty ones. */
+  ["chip","spin","splash","pitch","blast","runner","appr","chokea","lknock","punch","tee"]
+  .forEach(function(k){
+    var sh=SHOTS.filter(function(x){return x.key===k;})[0];
+    if(!sh || sh===first) return;
+    if(sh.from.indexOf(S.from)<0) return;
+    out.push(sh);
+  });
+  return out;
+}
+
 function compute(){
   var wd=WINDS.filter(function(w){return w.key===S.windDir;})[0];
   var qf=wd.q?num("cQuarter"):1;
   var lieMid=(S.lieLo+S.lieHi)/2;
-  var shot=S.shot==="auto"?autoShot(S.dist,S.wind,lieMid)
-                          :SHOTS.filter(function(s){return s.key===S.shot;})[0];
-
   var elevCost=S.elev/num("cElev");
-  var headMph=wd.head*S.wind*qf*shot.windMult;
   var landSurf=LANDING.filter(function(l){return l.key===S.land;})[0];
   var landMult=landSurf.mult;
   var gs=GREENSPEED.filter(function(g){return g.key===S.gspeed;})[0];
   if(S.land==="green"||S.land==="fringe") landMult*=gs.mult;
 
   var teeOnly={tee:1,pdrive:1,sting:1,choket:1,deck:1,auto:1};
-  var usable=BAG.filter(function(c){
+
+  /* Everything from here down depends on WHICH shot is being played, so
+     it is wrapped up and can be run for more than one candidate. */
+  function attempt(shot){
+  var headMph=wd.head*S.wind*qf*shot.windMult;
+  /* LEGAL is the hard rule: right class of club, and the Driver only off
+     a tee. It is never relaxed. */
+  var legal=BAG.filter(function(c){
     if(shot.clubs.indexOf(c.cls)<0) return false;
     if(c.driver && !teeOnly[shot.key]) return false;
+    return true;
+  });
+  /* USABLE narrows that to clubs with a measured window for this shot. */
+  var usable=legal.filter(function(c){
     var w=WINDOWS[c.name];
     if(w && !w[shot.key] && shot.key!=="tee" && shot.key!=="auto") return false;
     return true;
   });
+  /* When nothing has been measured for this shot, fall back to every
+     LEGAL club on an estimated window - which the result card then flags.
+     This used to fall back to BAG.slice(), the whole bag, which threw away
+     the class rule and the driver rule at the same time: every bunker shot
+     has an unmeasured window on every wedge, so every bunker shot emptied
+     this list and handed back the full bag. That is how a Driver came out
+     of the sand at 150% power with "nothing reaches" printed under it. */
+  if(usable.length===0) usable=legal.slice();
+  /* Only reachable if a shot names a club class the bag does not contain. */
   if(usable.length===0) usable=BAG.slice();
 
   /* forward model: given a dialed number D and a lie multiplier L,
@@ -913,6 +984,28 @@ function compute(){
   var solved=usable.map(solve);
   var fits=solved.filter(function(r){return r.inRange;})
                  .sort(function(a,b){return a.mc-b.mc;});
+  return {shot:shot, headMph:headMph, solved:solved, fits:fits};
+  }
+
+  /* On Auto, take the first shot on the ladder some club can actually
+     produce. An explicitly chosen shot is never substituted - if you ask
+     for a Pitch from 95 yd you get told it does not reach, rather than
+     being quietly handed something else. */
+  var res;
+  if(S.shot==="auto"){
+    var ladder=autoLadder(S.dist,S.wind,lieMid);
+    for(var li=0; li<ladder.length; li++){
+      res=attempt(ladder[li]);
+      if(res.fits.length) break;
+    }
+    /* Nothing on the ladder reaches: report against the shot actually
+       wanted, not against whatever happened to be last in the list. */
+    if(!res.fits.length) res=attempt(ladder[0]);
+  } else {
+    res=attempt(SHOTS.filter(function(s){return s.key===S.shot;})[0]);
+  }
+  var shot=res.shot, headMph=res.headMph, solved=res.solved, fits=res.fits;
+
   var R=fits[0], warn="";
   if(!R){
     R=solved.slice().sort(function(a,b){return Math.abs(a.power-.9)-Math.abs(b.power-.9);})[0];
@@ -964,7 +1057,7 @@ function compute(){
 
   var warnRow=$("warnRow");
   if(warn){warnRow.classList.add("show");warnRow.textContent="\u26A0 "+warn;}
-  else warnRow.classList.remove("show");
+  else { warnRow.classList.remove("show"); warnRow.textContent=""; }
 
   var alts=solved.filter(function(r){return r.club!==R.club&&r.inRange;})
     .sort(function(a,b){return Math.abs(a.mc-R.mc)-Math.abs(b.mc-R.mc);}).slice(0,2)
@@ -1131,6 +1224,18 @@ function resetCalib(){
 var LAST=null;
 
 function getLog(){ var l=lsGet(LS_LOG,[]); return Array.isArray(l)?l:[]; }
+
+/* Did this shot follow what the app prescribed? The prediction stored on
+   the entry was worked out for the prescribed club and dial, so a shot
+   played with a different club cannot be scored against it - comparing a
+   5 Iron result to a Driver prediction measures nothing. Overruled shots
+   are still logged and exported in full; they are simply not evidence
+   about the model. Entries written before the pickers existed have no
+   actClub and were logged as prescribed. */
+function followedPlan(e){
+  if(!e.actClub && !e.actShot) return true;
+  return e.actClub===e.club && e.actShot===e.shotKey;
+}
 function setLog(l){ return lsSet(LS_LOG,l); }
 
 function resetLogPanel(){
@@ -1139,6 +1244,7 @@ function resetLogPanel(){
   $("logPanel").classList.remove("on");
   $("fActLand").value=""; $("fActStop").value="";
   $("logErr").classList.remove("show");
+  fillLogPickers();
 }
 
 function fmtWhen(ts){ var d=new Date(ts); return (d.getMonth()+1)+"/"+d.getDate(); }
@@ -1157,9 +1263,12 @@ function renderLog(){
     var carryErr=r1(e.actLand-e.pred.carry);
     var rollErr =r1((e.actStop-e.actLand)-e.pred.roll);
     var r=document.createElement("div"); r.className="logrow";
+    var usedClub=e.actClub||e.club, usedShot=e.actShotName||e.shotName;
+    var own=!followedPlan(e);
     r.innerHTML='<span class="when">'+fmtWhen(e.ts)+'</span>'+
-      '<span class="what">'+e.club+' · '+e.shotName+' · '+e.target+' yd</span>'+
-      '<span class="err">'+sgn(carryErr)+' / '+sgn(rollErr)+'</span>';
+      '<span class="what">'+usedClub+' · '+usedShot+' · '+e.target+' yd'+
+      (own?' <i>your pick</i>':'')+'</span>'+
+      '<span class="err">'+(own?'—':sgn(carryErr)+' / '+sgn(rollErr))+'</span>';
     var b=document.createElement("button");
     b.className="del"; b.textContent="×"; b.title="Delete this entry";
     b.onclick=function(){
@@ -1206,7 +1315,7 @@ function suggestions(){
     var rows=log.filter(function(e){
       return e.club===club.name && (e.land==="green"||e.land==="fringe") &&
              e.pred && e.pred.roll>=1 && e.gr>0 && (e.actStop-e.actLand)>=0 &&
-             e.ts>since("gr:"+club.name);
+             followedPlan(e) && e.ts>since("gr:"+club.name);
     });
     if(rows.length<SUGG_MIN) return;
     var actual=0, predicted=0;
@@ -1238,7 +1347,8 @@ function suggestions(){
   [["cHeadFull"],["cHeadApp"],["cTail"]].forEach(function(pair){
     var id=pair[0];
     var rows=log.filter(function(e){
-      return e.rateId===id && flat(e) && e.headMph && e.ts>since("rate:"+id); });
+      return e.rateId===id && flat(e) && e.headMph && followedPlan(e) &&
+             e.ts>since("rate:"+id); });
     if(rows.length<SUGG_MIN) return;
     var trueCost=0, mph=0, errSum=0;
     rows.forEach(function(e){
@@ -1264,7 +1374,8 @@ function suggestions(){
      normalising each row against the direction it played, so a mixed
      sample cannot cancel itself out to nonsense. */
   var erows=log.filter(function(e){
-    return e.elevFt && calm(e) && e.elevYd && e.ts>since("rate:cElev"); });
+    return e.elevFt && calm(e) && e.elevYd && followedPlan(e) &&
+           e.ts>since("rate:cElev"); });
   if(erows.length>=SUGG_MIN){
     var absFt=0, trueYd=0, esum=0;
     erows.forEach(function(e){
@@ -1297,7 +1408,7 @@ function suggestions(){
      - and those are read straight off the game screen, so this surfaces
      as a note with no Accept button. The model does not get to
      overwrite measured data on its own say-so. */
-  var base=log.filter(function(e){ return calm(e) && flat(e); });
+  var base=log.filter(function(e){ return calm(e) && flat(e) && followedPlan(e); });
   if(base.length>=SUGG_MIN){
     var m=0; base.forEach(function(e){ m+=(e.actLand-e.pred.carry); });
     m=r1(m/base.length);
@@ -1390,6 +1501,36 @@ function paintLearned(){
 }
 
 /* ---- wiring ---------------------------------------------------- */
+/* The two pickers default to what was prescribed and are only touched
+   when the shot was overruled. They go brass the moment they differ, so a
+   deviation is visible before it is saved. */
+function fillLogPickers(){
+  if(!LAST) return;
+  var cl=$("fActClub"); cl.innerHTML="";
+  BAG.forEach(function(c){
+    var o=document.createElement("option");
+    o.value=c.name; o.textContent=c.name;
+    if(c.name===LAST.club) o.selected=true;
+    cl.appendChild(o);
+  });
+  var sh=$("fActShot"); sh.innerHTML="";
+  SHOTS.forEach(function(x){
+    if(x.key==="auto") return;
+    var o=document.createElement("option");
+    o.value=x.key; o.textContent=x.name;
+    if(x.key===LAST.shotKey) o.selected=true;
+    sh.appendChild(o);
+  });
+  markLogPickers();
+}
+function markLogPickers(){
+  if(!LAST) return;
+  $("fActClub").classList.toggle("changed",$("fActClub").value!==LAST.club);
+  $("fActShot").classList.toggle("changed",$("fActShot").value!==LAST.shotKey);
+}
+$("fActClub").onchange=markLogPickers;
+$("fActShot").onchange=markLogPickers;
+
 $("btnLogOpen").onclick=function(){
   if(!LAST) return;
   var p=$("logPanel"), open=!p.classList.contains("on");
@@ -1397,6 +1538,7 @@ $("btnLogOpen").onclick=function(){
   if(open){
     $("fActLand").placeholder=Math.round(LAST.pred.carry);
     $("fActStop").placeholder=Math.round(LAST.pred.stop);
+    fillLogPickers();
     $("fActLand").focus();
   }
 };
@@ -1412,6 +1554,9 @@ $("btnLogSave").onclick=function(){
   var e=JSON.parse(JSON.stringify(LAST));
   e.id="s"+Date.now()+"-"+Math.round(Math.random()*1e6);
   e.ts=Date.now(); e.actLand=land; e.actStop=stop;
+  e.actClub=$("fActClub").value;
+  e.actShot=$("fActShot").value;
+  e.actShotName=$("fActShot").options[$("fActShot").selectedIndex].textContent;
   var log=getLog(); log.push(e);
   if(!setLog(log)){ bad("This device is not saving — the shot could not be written."); return; }
   $("btnLogOpen").textContent="Logged — "+log.length+" in the book";
