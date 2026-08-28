@@ -155,22 +155,52 @@ The carry line was fitted in still air on flat ground. It does not survive conta
 | uphill | comes up **short** |
 | hole below you | runs long |
 
-Four directions, **no magnitudes**, so the model cannot apply them — and must not pretend to.
+**Loft multiplies the wind; it is not a fixed penalty.** The 2K23 wind guide (Gamer Ability)
+states that adding loft with the left stick increases the wind's **distance and aim** effect,
+and 2K's own guidance is to keep flight low into wind because the higher it climbs the more the
+wind affects the outcome. Two consequences for whoever implements this:
 
-**Two of those four make the ball land shorter than this model says, and the entire purpose of
-the loft recommendation is clearing something short of the green.** Being wrong in that
-direction puts the ball in the hazard the advice was meant to avoid. So `loftAdviceSafe()` makes
-Auto decline whenever a head or tail wind or any slope is in play: it holds Neutral and says
+1. **It scales with wind speed**, so what is missing is a single multiplier, not a lookup table.
+   It belongs on the **wind term** in `fly()` where `headMph` becomes yards, and on the
+   crosswind drift in `aimYd` — *not* on the base carry, which is where a fixed offset would
+   have gone.
+2. **It cuts both ways.** Into wind it costs more; downwind it should *gain* more.
+
+**Crosswind is NOT exempt**, though it was in the first version of this guard. Crosswind does
+not move the ball up or down the line, so it looked harmless — but the source says loft raises
+the **aim** effect too, and this app prints an aim figure. Recommending loft in a crosswind
+would understate that number. Same error, different output. `loftAdviceSafe()` is now simply
+`!S.wind && !S.elev`.
+
+**Loft × elevation has no published source at all.** Nobody has written about that interaction;
+Mr Daley's observation that more loft uphill comes up short is the only evidence there is, and
+it stays an observation until measured.
+
+No magnitudes for any of it, so the model cannot apply them and must not pretend to. Two of the
+four make the ball land shorter than this model says, and the entire purpose of the loft
+recommendation is clearing something short of the green — being wrong in that direction puts the
+ball in the hazard the advice was meant to avoid. So Auto declines: it holds Neutral and says
 which of the four applies. The hazard warning still fires on its own, and "club up" stays sound
-advice regardless of loft. Setting loft by hand under those conditions prints an unverified
-caveat rather than being blocked.
+regardless of loft. Setting loft by hand prints an unverified caveat rather than being blocked.
 
-Crosswind is *not* excluded — it moves the ball sideways in this model, not up or down the line.
+### The test that closes both interactions
 
-**To close this**, measure full high against neutral on one club, at two wind speeds and two
-slopes: 10 and 20 mph headwind on the flat, and 30 and 60 ft uphill in still air, against a
-still-air flat baseline. If the interaction scales with wind speed and with elevation, that is
-one coefficient each and it can go straight in.
+Full high against neutral, **one club**, six conditions — twelve readings:
+
+| # | condition | what it gives |
+| --- | --- | --- |
+| 1 | flat, still air | baseline; already have −4.1/+1.9 on the 7 Iron |
+| 2 | 10 mph headwind, flat | wind multiplier, first point |
+| 3 | 20 mph headwind, flat | confirms it scales rather than offsets |
+| 4 | **10 mph tailwind, flat** | **the falsification check** |
+| 5 | 30 ft uphill, still air | elevation interaction, first point |
+| 6 | 60 ft uphill, still air | confirms elevation scales too |
+
+**Condition 4 is the one that decides whether the model is right.** If loft is a wind
+multiplier then downwind at full high must *gain* distance. If it does not gain, the multiplier
+model is wrong and the effect is something else — and no amount of headwind data will reveal
+that, because into wind both a multiplier and a flat penalty look identical. Run it before
+trusting any of the rest.
 
 ### Auto loft prescribes; it does not just accept
 

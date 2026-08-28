@@ -747,17 +747,41 @@ var LOFTS=[
      more loft uphill            -> comes up short
      more loft with the hole below you -> runs long
 
-   Four directions, no magnitudes, so the model cannot apply them. What
-   it CAN do is refuse to give advice it has no basis for: two of those
-   four - uphill and into wind - make the ball land SHORTER than this
-   model says, and the whole purpose of the loft recommendation is
-   clearing something short of the green. Being wrong in that direction
-   puts the ball in the hazard. So Auto declines rather than guesses.
+   LOFT MULTIPLIES THE WIND; it is not a fixed penalty. The 2K23 wind
+   guide (Gamer Ability) states that adding loft with the left stick
+   increases the wind's DISTANCE AND AIM effect, and 2K's own guidance
+   is to keep flight low into wind because the higher it climbs the more
+   the wind affects it. Two consequences:
 
-   Crosswind is not excluded: it moves the ball sideways in this model,
-   not up or down the line. */
+     1. The effect scales with wind speed, so what is missing is a single
+        multiplier and not a lookup table. It belongs on the wind term in
+        fly(), where headMph is turned into yards, and on the crosswind
+        drift in aimYd - NOT on the base carry, which is where a fixed
+        offset would have gone.
+     2. It cuts both ways. Into wind it costs more; downwind it should
+        GAIN more. If a measured tailwind at full high does not gain,
+        the multiplier model is wrong and the effect is something else.
+        That is the check to run before trusting any of it.
+
+   CROSSWIND IS NOT EXEMPT, though it was in the first version of this
+   guard. Crosswind does not move the ball up or down the line, so it
+   looked harmless - but the source says loft raises the AIM effect too,
+   and this app prints an aim figure. Recommending loft in a crosswind
+   would understate that number. Same error, different output.
+
+   No magnitudes for any of it yet, so the model cannot apply them and
+   must not pretend to. Two of the four - uphill and into wind - make the
+   ball land SHORTER than this model says, and the whole purpose of the
+   loft recommendation is clearing something short of the green. Being
+   wrong in that direction puts the ball in the hazard. So Auto declines
+   rather than guesses.
+
+   Loft and ELEVATION has no published source at all - nobody has written
+   about that interaction. Mr Daley's observation that more loft uphill
+   comes up short is the only evidence there is, and it stays an
+   observation until it is measured. */
 function loftAdviceSafe(wd){
-  return !(wd.head!==0 && S.wind>0) && !S.elev;
+  return !S.wind && !S.elev;
 }
 function loftCarryPct(club,pos){
   if(!pos) return 0;
@@ -1313,9 +1337,11 @@ function compute(){
   if(loftBlind){
     why.classList.add("show");
     why.textContent="Held at neutral. More loft "+
-      (S.elev>0?"into a climb comes up short":
-       S.elev<0?"with the hole below you runs long":
-       (wd.head>0?"into the wind gets pushed back":"downwind carries further"))+
+      (S.elev>0  ? "into a climb comes up short":
+       S.elev<0  ? "with the hole below you runs long":
+       wd.head>0 ? "into the wind gets pushed back":
+       wd.head<0 ? "downwind carries further":
+                   "lets the wind push it further off line")+
       ", and by how much is not measured yet \u2014 so no loft is advised here. Set it by hand "+
       "if you know the shot.";
   } else if(loftAuto && loftForced){
