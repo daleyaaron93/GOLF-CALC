@@ -430,6 +430,9 @@
       <div class="row"><span class="lbl">&nbsp;&nbsp;measured at<em>The carry that drift figure was taken at. Shorter shots are in the air less, so they drift proportionally less.</em></span><span class="tag ok">YOURS</span><input type="number" step="5" id="cCrossRef" value="250"></div>
       <div class="row"><span class="lbl">Quartering factor<em>How much of the wind counts when it is at 45&deg; instead of straight on. 0.7 = seven tenths of it.</em></span><span class="tag ok">SRC</span><input type="number" step=".05" id="cQuarter" value="0.7"></div>
       <div class="row"><span class="lbl">Elevation<em>Feet of climb that cost you one yard of carry. 3 means every 3 ft uphill plays a yard longer &mdash; and downhill gives it back.</em></span><span class="tag ok">SRC</span><input type="number" step=".1" id="cElev" value="3"></div>
+      <div class="row"><span class="lbl">Loft &times; wind<em>How much more the wind bites at full loft. 0.25 = a quarter more. Zero means unknown, and loft advice stays off in wind.</em></span><span class="tag guess">MEASURE ME</span><input type="number" step=".05" id="cLoftWind" value="0"></div>
+      <div class="row"><span class="lbl">Loft &times; aim<em>Same, for sideways drift in a crosswind. Off-line, not short.</em></span><span class="tag guess">MEASURE ME</span><input type="number" step=".05" id="cLoftAim" value="0"></div>
+      <div class="row"><span class="lbl">Loft &times; slope<em>How much more a climb costs at full loft. No published source exists for this one at all.</em></span><span class="tag guess">MEASURE ME</span><input type="number" step=".05" id="cLoftElev" value="0"></div>
     </details>
 
     <details id="dWin">
@@ -490,6 +493,7 @@
         <div class="px"><span class="n" id="loftRx">Neutral</span><span class="l" id="loftLbl">Loft</span></div>
       </div>
       <div class="why" id="loftWhy"></div>
+      <div class="why" id="lieRow"></div>
 
       <div class="flight">
         <div class="fl"><span class="n" id="landOut">143</span><span class="l">Lands</span></div>
@@ -780,8 +784,17 @@ var LOFTS=[
    about that interaction. Mr Daley's observation that more loft uphill
    comes up short is the only evidence there is, and it stays an
    observation until it is measured. */
+/* Advice is withheld only for the components still unmeasured. Measure
+   loft x wind and loft advice starts working into a headwind; measure
+   loft x aim and it starts working in a crosswind; measure loft x slope
+   and it starts working on a hill. Each opens on its own. */
 function loftAdviceSafe(wd){
-  return !S.wind && !S.elev;
+  var head =(wd.head !==0) && S.wind>0;
+  var cross=(wd.cross!==0) && S.wind>0;
+  if(head  && !num("cLoftWind")) return false;
+  if(cross && !num("cLoftAim"))  return false;
+  if(S.elev && !num("cLoftElev")) return false;
+  return true;
 }
 function loftCarryPct(club,pos){
   if(!pos) return 0;
@@ -1145,19 +1158,28 @@ function compute(){
   function fly(D,L,ratio,club){
     var carry=D*(L/100);
     carry*=1+loftCarryPct(club,loftPos)/100;
-    carry-=elevCost;
+    /* Same shape for slope: more loft uphill comes up short, downhill runs
+       long, and elevCost is signed so one factor covers both. */
+    carry-=elevCost*(1+num("cLoftElev")*(loftPos/2));
     /* Which rate fired, and what it cost, is recorded on the way out.
        The shot log reads these off the result rather than re-deriving
        them later - re-deriving is how a learning pass ends up
        correcting a rate that never ran on that shot. */
+    /* Loft multiplies the WIND, it is not a fixed penalty on carry - so
+       the factor lands here, on the wind term, and not on the base carry
+       above. loftPos/2 normalises full high to 1.0. It cuts both ways for
+       free: into wind windYd is a positive cost and grows, downwind it is
+       a negative cost and the gain grows. Ships at zero, so until it is
+       measured this line changes nothing. */
+    var loftWind=1+num("cLoftWind")*(loftPos/2);
     var rateId=null, windYd=0;
     if(headMph>0){
       rateId=carry>=num("cFullThresh")?"cHeadFull":"cHeadApp";
-      windYd=headMph*num(rateId);
+      windYd=headMph*num(rateId)*loftWind;
       carry-=windYd;
     } else if(headMph<0){
       rateId="cTail";
-      windYd=headMph*num("cTail");
+      windYd=headMph*num("cTail")*loftWind;
       carry-=windYd;
     }
     carry=Math.max(1,carry);
@@ -1306,7 +1328,7 @@ function compute(){
     shapeRx=pushRight?"Draw":"Fade";
     /* drift scales with how long the ball is in the air, i.e. with distance */
     var ref=num("cCrossRef")||250;
-    aimYd=crossMph*num("cCross")*(R.mid.carry/ref);
+    aimYd=crossMph*num("cCross")*(R.mid.carry/ref)*(1+num("cLoftAim")*(loftPos/2));
     aimDir=pushRight?"left":"right";
   }
 
@@ -1336,14 +1358,17 @@ function compute(){
   why.classList.remove("show");
   if(loftBlind){
     why.classList.add("show");
+    var missing = (S.elev && !num("cLoftElev")) ? "loft \u00D7 slope"
+                : (wd.head!==0 && S.wind>0 && !num("cLoftWind")) ? "loft \u00D7 wind"
+                : "loft \u00D7 aim";
     why.textContent="Held at neutral. More loft "+
       (S.elev>0  ? "into a climb comes up short":
        S.elev<0  ? "with the hole below you runs long":
        wd.head>0 ? "into the wind gets pushed back":
        wd.head<0 ? "downwind carries further":
                    "lets the wind push it further off line")+
-      ", and by how much is not measured yet \u2014 so no loft is advised here. Set it by hand "+
-      "if you know the shot.";
+      ", and by how much is not measured yet. Fill in "+missing+
+      " under Wind &amp; elevation and this starts working. Set loft by hand meanwhile.";
   } else if(loftAuto && loftForced){
     why.classList.add("show");
     why.textContent="Flighted up to "+loftName.toLowerCase()+" \u2014 "+loftRow.stick+
@@ -1373,6 +1398,21 @@ function compute(){
     aimRow.innerHTML=(aimDir==="left"?"\u25C0":"\u25B6")+" Aim <span style='color:var(--paper)'>"+
       Math.round(aimYd)+" yd "+aimDir+"</span>";
   } else aimRow.classList.remove("show");
+
+  /* The single biggest thing between a person and a tight result is the
+     lie band they typed. On a fixed lie this model's own spread is zero
+     at every distance; a category preset like Lt rough 92-97 puts 24 ft
+     of scatter on a 150 yd shot all by itself, and no amount of logged
+     data can remove it - it is uncertainty the game handed over, not
+     model error. So say so, and say what to do about it. */
+  var spreadFt=Math.round(spread*3);
+  var lieRow=$("lieRow");
+  if(spreadFt>10){
+    lieRow.classList.add("show");
+    lieRow.innerHTML="A lie of "+S.lieLo+"\u2013"+S.lieHi+"% is "+spreadFt+
+      " ft of that spread on its own. Type the two numbers under the ball icon "+
+      "instead of tapping a preset and this tightens right up.";
+  } else lieRow.classList.remove("show");
 
   var warnRow=$("warnRow");
   if(warn){warnRow.classList.add("show");warnRow.textContent="\u26A0 "+warn;}
@@ -1454,10 +1494,12 @@ function r1(n){ return Math.round(n*10)/10; }
 function r2(n){ return Math.round(n*100)/100; }
 function sgn(n){ return (n>0?"+":"")+n; }
 
-var RATE_IDS=["cTail","cHeadApp","cHeadFull","cFullThresh","cCross","cCrossRef","cQuarter","cElev"];
+var RATE_IDS=["cTail","cHeadApp","cHeadFull","cFullThresh","cCross","cCrossRef","cQuarter","cElev",
+              "cLoftWind","cLoftAim","cLoftElev"];
 var RATE_LABEL={cTail:"tailwind",cHeadApp:"headwind on approaches",cHeadFull:"headwind on full shots",
   cFullThresh:"full-shot threshold",cCross:"crosswind",cCrossRef:"crosswind reference",
-  cQuarter:"quartering factor",cElev:"elevation ft per yd"};
+  cQuarter:"quartering factor",cElev:"elevation ft per yd",
+  cLoftWind:"loft \u00D7 wind",cLoftAim:"loft \u00D7 aim",cLoftElev:"loft \u00D7 slope"};
 var BAG_FIELDS=["min","max","total","gr"];
 var SHOT_FIELDS=["maxPct","windMult","roll"];
 

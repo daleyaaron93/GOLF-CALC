@@ -183,6 +183,46 @@ ball in the hazard the advice was meant to avoid. So Auto declines: it holds Neu
 which of the four applies. The hazard warning still fires on its own, and "club up" stays sound
 regardless of loft. Setting loft by hand prints an unverified caveat rather than being blocked.
 
+### The three coefficients, and how the gate opens
+
+`cLoftWind`, `cLoftAim` and `cLoftElev` ship at **0**, which makes them no-ops — the model
+behaves exactly as if they did not exist. Each is a multiplier on the term it belongs to, not on
+base carry:
+
+```
+windYd   *= 1 + cLoftWind * (loftPos/2)     // loft multiplies the WIND
+aimYd    *= 1 + cLoftAim  * (loftPos/2)     // and the AIM effect
+elevCost *= 1 + cLoftElev * (loftPos/2)     // slope, same shape
+```
+
+`loftPos/2` normalises full high to 1.0. **One coefficient covers both directions for free**,
+because the terms are signed: into wind `windYd` is a positive cost and grows; downwind it is a
+negative cost and the gain grows. Verified — at `cLoftWind 0.25`, full high into a 15 mph wind
+moves the dial 169 → 175, and downwind 136 → 132, while neutral is unchanged in both.
+
+`loftAdviceSafe()` withholds advice **per component**: fill in `cLoftWind` and loft advice
+starts working into a headwind; fill in `cLoftAim` and it works in a crosswind; fill in
+`cLoftElev` and it works on a hill. Each opens on its own, so partial data is immediately useful.
+
+### What actually limits accuracy — it is the lie band, not the model
+
+On a **fixed** lie this model's own stop spread is **0 ft at every distance**. All the scatter
+comes from the lie band, and the category presets are wide:
+
+| lie entered | stop spread at 150 yd |
+| --- | --- |
+| Fairway 98–99 | 6 ft |
+| Lt rough **preset** 92–97 | **24 ft** |
+| Lt rough, actual 94–95 | 6 ft |
+| Bunker **preset** 80–93 | **68 ft** |
+| Bunker, actual 88–89 | 6 ft |
+
+That is uncertainty the *game* handed over, not model error, and **no amount of logged data can
+remove it**. To land inside 10 ft the band must be roughly 2% or tighter at 150 yd, 1% at 210.
+The presets exist to set `from` and give a starting point; the two numbers under the ball icon
+are what actually produce a tight answer. The result card now says so whenever the spread
+exceeds 10 ft, naming the band and the cost in feet.
+
 ### The test that closes both interactions
 
 Full high against neutral, **one club**, six conditions — twelve readings:
