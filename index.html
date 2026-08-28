@@ -602,7 +602,11 @@ var WINDOWS={
    "measured" to it if it is simply present and positive. Without this table,
    dropping interpolated numbers into WINDOWS would silently reopen the exact
    hole the zero-min guard closed — unverified data reading as fact.
-   DELETE a key here the moment the real pair is measured. */
+   DELETE a key here the moment the real pair is measured - or type the
+   pair into My windows, which now does it for you.
+   The lflop entry below only became LIVE when the Long flop shot was
+   added: before that there was no shot with that key, so the flag it
+   carried protected nothing at all. */
 var INTERP={
  "56\u00B0":{lflop:1, flop:1}
 };
@@ -652,6 +656,19 @@ var SHOTS=[
  {key:"recov", name:"Recovery",       grp:"Recovery",clubs:["iron","wedge"],       from:["rough","sand"],windMult:0.70,roll:0,  maxPct:0.85,minPct:null,src:"GUESS"},
  {key:"punch", name:"Punch",          grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough","sand"],windMult:0.50,roll:12,maxPct:0.70,minPct:null,src:"GUESS"},
  {key:"chokep",name:"Choked punch",   grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough","sand"],windMult:0.50,roll:10,maxPct:0.65,minPct:null,src:"GUESS"},
+ /* Long flop. Its windows were measured on all four wedges long before
+    the shot itself existed in this table, so the data sat unreachable and
+    the INTERP flag on the 56 deg protected nothing. Adding the shot makes
+    both live.
+    maxPct 0.362 = mean of the four measured maxes over each club's max
+    carry (46/133, 43/120, 39/105, 36/97).
+    minPct 0.218 = mean of THREE of the mins - the 56 deg min is the
+    interpolated one flagged in INTERP and is left out of the fit.
+    windMult and roll are the only invented numbers here: windMult copies
+    Flop rather than inventing a third figure, and roll is a guess that a
+    longer, flatter flop releases a little more than a Flop's 1 yd. Those
+    two are what the GUESS tag is pointing at. */
+ {key:"lflop", name:"Long flop",      grp:"Recovery",clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.30,roll:2, maxPct:0.362,minPct:0.218,src:"GUESS"},
  {key:"flop",  name:"Flop",           grp:"Recovery",clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.30,roll:1, maxPct:0.35,minPct:0.18,src:"YOURS"},
  {key:"sflop", name:"Super flop",     grp:"Recovery",clubs:["wedge"],              from:["turf","rough","sand"],windMult:0.35,roll:0.5,maxPct:0.25,minPct:0.12,src:"GUESS"},
  {key:"splash",name:"Splash",         grp:"Bunker",  clubs:["wedge"],              from:["sand"], windMult:0.20,roll:3, maxPct:0.454,minPct:0.20,src:"MEAS"},

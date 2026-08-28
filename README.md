@@ -299,12 +299,25 @@ window the list emptied and the earlier fallback caught it, but the moment one w
 `usable` became that single club. **Filling in real data made the answer worse.** Do not
 remove the widening step.
 
-### Known dead data: `lflop`
+### Long flop — added, and it woke the `INTERP` guard up
 
-`WINDOWS` carries `lflop` pairs for PW, 50°, 56° and 60°, and `INTERP` flags `56°.lflop` — but
-**there is no shot with key `lflop` in `SHOTS`**, so none of it is reachable, and the long
-comment in the table describing how that 56° pair was interpolated protects nothing. Either
-add a Long flop shot or drop the data; it is a game-domain call, not a code one.
+Long flop is a real shot; it was simply missing from `SHOTS` while its windows sat measured on
+all four wedges. Adding it made both the data and the flag live. **`WINDOWS` now has no orphan
+keys** — every measured pair belongs to a shot that exists.
+
+`maxPct 0.362` is the mean of the four measured maxes over each club's max carry
+(46/133, 43/120, 39/105, 36/97). `minPct 0.218` is the mean of **three** of the mins — the 56°
+min is the interpolated one flagged in `INTERP` and is deliberately left out of the fit.
+
+`windMult` and `roll` are the only invented numbers on the row, which is why it carries
+`GUESS`. `windMult` copies Flop rather than inventing a third figure; `roll: 2` is a guess that
+a longer, flatter flop releases slightly more than a Flop's 1 yd. Those two are what the tag is
+pointing at.
+
+**This is the first time the `INTERP` guard has ever fired.** Until Long flop existed there was
+no shot with that key, so the flag on `56°.lflop` — and the long comment in `WINDOWS` explaining
+how that pair was interpolated — protected nothing at all. The 56° now correctly reports
+`measured:false` and warns, while the 60° reports `measured:true` and does not.
 
 ---
 
