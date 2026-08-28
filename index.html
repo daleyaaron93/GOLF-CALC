@@ -214,6 +214,7 @@
     text-transform:uppercase;color:var(--brass);font-weight:400;margin:11px 0 3px;}
   .gloss span{font-family:var(--serif);font-size:13.5px;line-height:1.6;color:var(--ink-2);}
   /* A one-line plain-language gloss under a single-value row's label. */
+  .row .lbl .tag{margin-left:8px;}
   .row .lbl em{display:block;font-family:var(--serif);font-style:italic;font-size:12.5px;
     line-height:1.5;color:var(--ink-mute);letter-spacing:0;text-transform:none;
     margin-top:3px;padding-right:6px;}
@@ -414,6 +415,23 @@
       <div class="row"><span class="lbl">&nbsp;&nbsp;measured at<em>The carry that drift figure was taken at. Shorter shots are in the air less, so they drift proportionally less.</em></span><span class="tag ok">YOURS</span><input type="number" step="5" id="cCrossRef" value="250"></div>
       <div class="row"><span class="lbl">Quartering factor<em>How much of the wind counts when it is at 45&deg; instead of straight on. 0.7 = seven tenths of it.</em></span><span class="tag ok">SRC</span><input type="number" step=".05" id="cQuarter" value="0.7"></div>
       <div class="row"><span class="lbl">Elevation<em>Feet of climb that cost you one yard of carry. 3 means every 3 ft uphill plays a yard longer &mdash; and downhill gives it back.</em></span><span class="tag ok">SRC</span><input type="number" step=".1" id="cElev" value="3"></div>
+    </details>
+
+    <details id="dWin">
+      <summary id="winSummary">My windows</summary>
+      <div class="note">When you pick a club and a shot in the game, the power dial shows a
+      highest and a lowest yardage. That pair is what tells the app a Punch with a 7 Iron tops
+      out at 139 and won&rsquo;t go below 30 &mdash; which is different from what the club does
+      on a full swing, and that is why it can&rsquo;t live in My&nbsp;bag. Pick a club, read the
+      two numbers off your screen, type them in. A pair you fill in stops being a guess
+      immediately.</div>
+      <div class="field" style="margin-bottom:12px">
+        <div class="flabel"><span>Club</span><span class="hint">one at a time</span></div>
+        <select class="sel" id="winClub"></select>
+      </div>
+      <div class="chip-grid" id="winFilter" style="margin-bottom:4px"></div>
+      <div id="winRows"></div>
+      <div class="note" id="winFoot"></div>
     </details>
 
     <details id="dLog">
@@ -984,6 +1002,20 @@ function compute(){
   var solved=usable.map(solve);
   var fits=solved.filter(function(r){return r.inRange;})
                  .sort(function(a,b){return a.mc-b.mc;});
+  /* Clubs with a measured window are preferred - but a measured window on
+     ONE club must not strand the others. A missing key means two different
+     things here, "the game does not offer this pairing" and "nobody has
+     measured it yet", and the table cannot tell them apart. While every
+     wedge lacked a bunker window the list emptied and the fallback above
+     caught it; the moment My windows fills one in, `usable` is that single
+     club and the rest drop out - so filling in real data made the answer
+     worse. If nothing measured fits, widen to every LEGAL club on
+     estimated windows, flagged on the card as always. */
+  if(!fits.length && usable.length<legal.length){
+    solved=legal.map(solve);
+    fits=solved.filter(function(r){return r.inRange;})
+               .sort(function(a,b){return a.mc-b.mc;});
+  }
   return {shot:shot, headMph:headMph, solved:solved, fits:fits};
   }
 
@@ -1029,7 +1061,8 @@ function compute(){
     warn="Worst-case lands "+Math.round(R.worst.carry)+" \u2014 short of the "+S.haz+" yd carry. Club up.";
 
   var spread=R.best.stop-R.worst.stop;
-  if(!R.measured && !warn) warn="Estimated window \u2014 this club/shot pair isn't measured yet.";
+  if(!R.measured && !warn) warn="Estimated window \u2014 this club/shot pair isn't measured yet. "+
+    "Read the two dial numbers off your screen and fill it in under My windows.";
 
   $("clubOut").textContent=R.club.name;
   $("modeTag").textContent=S.shot==="auto"?"Auto \u2192 "+shot.name:shot.name;
@@ -1150,6 +1183,10 @@ function captureDefaults(){
   /* defaultValue is the value="" written in the markup - it stays put
      even after the person has typed over the field. */
   RATE_IDS.forEach(function(id){ DEFAULTS.rates[id]=parseFloat($(id).defaultValue); });
+  /* The shipped window tables, kept whole so a pair can be put back
+     individually as well as wholesale by "reset to defaults". */
+  DEFAULTS.windows=JSON.parse(JSON.stringify(WINDOWS));
+  DEFAULTS.interp =JSON.parse(JSON.stringify(INTERP));
 }
 
 /* Which values the learning pass has changed, and off how many shots.
@@ -1176,11 +1213,22 @@ function applyCalib(){
   if(c.rates) RATE_IDS.forEach(function(id){
     if(typeof c.rates[id]==="number") $(id).value=c.rates[id];
   });
+  /* Hand-typed windows go on last and clear any INTERP flag they cover. */
+  WIN_OVERRIDE=c.windows||{};
+  Object.keys(WIN_OVERRIDE).forEach(function(club){
+    Object.keys(WIN_OVERRIDE[club]).forEach(function(k){
+      var p=WIN_OVERRIDE[club][k];
+      if(!(p && p.length===2 && p[0]>0 && p[1]>0)){ delete WIN_OVERRIDE[club][k]; return; }
+      WINDOWS[club]=WINDOWS[club]||{};
+      WINDOWS[club][k]=[p[0],p[1]];
+      if(INTERP[club] && INTERP[club][k]) delete INTERP[club][k];
+    });
+  });
   LEARNED=c.learned||{};
 }
 
 function saveCalib(){
-  var c={bag:{},land:{},shots:{},rates:{},learned:LEARNED};
+  var c={bag:{},land:{},shots:{},rates:{},windows:WIN_OVERRIDE,learned:LEARNED};
   BAG.forEach(function(club){ var o={}; BAG_FIELDS.forEach(function(f){o[f]=club[f];}); c.bag[club.name]=o; });
   LANDING.forEach(function(l){ c.land[l.key]=l.mult; });
   SHOTS.forEach(function(s){ var o={}; SHOT_FIELDS.forEach(function(f){o[f]=s[f];}); c.shots[s.key]=o; });
@@ -1196,11 +1244,163 @@ function resetCalib(){
     if(d) SHOT_FIELDS.forEach(function(f){ s[f]=d[f]; }); });
   RATE_IDS.forEach(function(id){ $(id).value=DEFAULTS.rates[id]; });
   LEARNED={};
+  WIN_OVERRIDE={};
+  WINDOWS=JSON.parse(JSON.stringify(DEFAULTS.windows));
+  INTERP =JSON.parse(JSON.stringify(DEFAULTS.interp));
   lsDel(LS_CALIB);
   /* The shot log is data, not a setting. It deliberately survives a
      calibration reset - losing a season of shots to a settings wipe is
      the exact failure the export exists to guard against. */
   buildBag(); buildShotRows(); buildLandRows(); paintLearned(); renderSuggestions();
+  renderWindows();
+}
+
+/* ================================================================
+   MY WINDOWS - the measured dial range for a club-and-shot pair.
+
+   A window is READ, never inferred. It is the highest and lowest number
+   the power dial offers for that combination, sitting on the screen in
+   front of you. No amount of logged shots can produce it - where a ball
+   finished says nothing about what the box said - which is why this is
+   typed in rather than learned.
+
+   Typing a pair in also deletes any matching INTERP flag. The old table
+   carried a comment telling whoever measured a pair to remember to
+   delete that key by hand or it would keep reporting as estimated; a
+   rule stated only in a comment is dissolved by the first edit that
+   forgets it, so the mechanism now enforces it.
+   ================================================================ */
+var WIN_OVERRIDE={};      /* club -> shotKey -> [max,min], typed by hand */
+var WIN_FILTER="all";
+
+function shotsForClub(club){
+  var teeOnly={tee:1,pdrive:1,sting:1,choket:1,deck:1,auto:1};
+  return SHOTS.filter(function(sh){
+    if(sh.key==="auto") return false;
+    if(sh.clubs.indexOf(club.cls)<0) return false;
+    if(club.driver && !teeOnly[sh.key]) return false;
+    return true;
+  });
+}
+function winPair(clubName,key){
+  var w=WINDOWS[clubName];
+  return (w && w[key]) ? w[key] : null;
+}
+function winStatus(club,sh){
+  var p=winPair(club.name,sh.key);
+  if(!p || !(p[0]>0) || !(p[1]>0))                     return {tag:"TO FILL", cls:"guess"};
+  if(INTERP[club.name] && INTERP[club.name][sh.key])   return {tag:"ESTIMATE",cls:"guess"};
+  if(WIN_OVERRIDE[club.name] && WIN_OVERRIDE[club.name][sh.key]) return {tag:"YOURS",cls:"ok"};
+  return {tag:"MEASURED", cls:"ok"};
+}
+function winCounts(){
+  var n={done:0,todo:0};
+  BAG.forEach(function(c){ shotsForClub(c).forEach(function(sh){
+    var t=winStatus(c,sh).tag;
+    if(t==="TO FILL"||t==="ESTIMATE") n.todo++; else n.done++;
+  });});
+  return n;
+}
+
+/* Both ends are needed before a pair counts. Clearing either one puts the
+   pair back to whatever shipped - including its INTERP flag, if it had
+   one - rather than blanking it. */
+function setWindow(clubName,key,mx,mn){
+  var ok = mx>0 && mn>0;
+  if(ok){
+    WINDOWS[clubName]=WINDOWS[clubName]||{};
+    WINDOWS[clubName][key]=[mx,mn];
+    WIN_OVERRIDE[clubName]=WIN_OVERRIDE[clubName]||{};
+    WIN_OVERRIDE[clubName][key]=[mx,mn];
+    if(INTERP[clubName] && INTERP[clubName][key]) delete INTERP[clubName][key];
+  } else {
+    if(WIN_OVERRIDE[clubName]) delete WIN_OVERRIDE[clubName][key];
+    var d=DEFAULTS.windows[clubName];
+    if(d && d[key]){ WINDOWS[clubName]=WINDOWS[clubName]||{};
+                     WINDOWS[clubName][key]=d[key].slice(); }
+    else if(WINDOWS[clubName]) delete WINDOWS[clubName][key];
+    var di=DEFAULTS.interp[clubName];
+    if(di && di[key]){ INTERP[clubName]=INTERP[clubName]||{}; INTERP[clubName][key]=1; }
+  }
+  saveCalib();
+}
+
+function buildWinFilter(){
+  var el=$("winFilter"); el.innerHTML="";
+  [["all","All shots"],["todo","Only the gaps"]].forEach(function(f){
+    var d=document.createElement("div");
+    d.className="chip"+(WIN_FILTER===f[0]?" active":"");
+    d.textContent=f[1];
+    d.onclick=function(){ WIN_FILTER=f[0]; buildWinFilter(); buildWinRows(); };
+    el.appendChild(d);
+  });
+}
+function buildWinRows(){
+  var el=$("winRows"); el.innerHTML="";
+  var club=BAG.filter(function(c){return c.name===$("winClub").value;})[0];
+  if(!club) return;
+  var list=shotsForClub(club).filter(function(sh){
+    if(WIN_FILTER!=="todo") return true;
+    var t=winStatus(club,sh).tag;
+    return t==="TO FILL"||t==="ESTIMATE";
+  });
+  if(!list.length){
+    el.innerHTML='<div class="empty">Nothing left to fill in for the '+club.name+'.</div>';
+    return;
+  }
+  el.innerHTML='<div class="row hdr"><span class="lbl"></span><span>Highest</span>'+
+               '<span>Lowest</span></div>';
+  var lastGrp=null;
+  list.forEach(function(sh){
+    if(sh.grp!==lastGrp){
+      var h=document.createElement("div");
+      h.style.cssText="font-family:var(--sans);font-size:8.5px;letter-spacing:.14em;"+
+        "color:#4a5449;text-transform:uppercase;margin:10px 2px 2px;";
+      h.textContent=sh.grp; el.appendChild(h); lastGrp=sh.grp;
+    }
+    var p=winPair(club.name,sh.key), st=winStatus(club,sh);
+    var r=document.createElement("div"); r.className="row";
+    r.innerHTML='<span class="lbl">'+sh.name+
+      '<span class="tag '+st.cls+'" data-tag="1">'+st.tag+'</span></span>'+
+      '<input type="number" inputmode="numeric" data-w="mx" value="'+
+        (p&&p[0]>0?p[0]:"")+'" placeholder="—">'+
+      '<input type="number" inputmode="numeric" data-w="mn" value="'+
+        (p&&p[1]>0?p[1]:"")+'" placeholder="—">';
+    r.querySelectorAll("input").forEach(function(inp){
+      inp.addEventListener("input",function(){
+        var mx=parseFloat(r.querySelector('[data-w="mx"]').value)||0;
+        var mn=parseFloat(r.querySelector('[data-w="mn"]').value)||0;
+        setWindow(club.name,sh.key,mx,mn);
+        /* Repaint the tag in place - rebuilding the list here would take
+           the focus out of the field being typed into. */
+        var t=r.querySelector('[data-tag]'), ns=winStatus(club,sh);
+        t.textContent=ns.tag; t.className="tag "+ns.cls;
+        updateWinSummary();
+      });
+    });
+    el.appendChild(r);
+  });
+}
+function updateWinSummary(){
+  var n=winCounts();
+  $("winSummary").textContent="My windows \u2014 "+n.done+" measured, "+n.todo+" to fill";
+  $("winFoot").innerHTML=n.todo
+    ? "A pair marked <span class=\"tag guess\">TO FILL</span> is being guessed from the "+
+      "club\u2019s full-swing numbers, and any club/shot using it says so on the result. "+
+      "<span class=\"tag guess\">ESTIMATE</span> means it was worked out from neighbouring "+
+      "clubs rather than read. Both stop the moment you type the real pair in."
+    : "Every pair in the bag is measured.";
+}
+function renderWindows(){
+  var sel=$("winClub");
+  if(!sel.options.length){
+    BAG.forEach(function(c){
+      var o=document.createElement("option");
+      o.value=c.name; o.textContent=c.name; sel.appendChild(o);
+    });
+    sel.onchange=buildWinRows;
+  }
+  buildWinFilter(); buildWinRows(); updateWinSummary();
 }
 
 /* ================================================================
@@ -1615,7 +1815,7 @@ RATE_IDS.forEach(function(id){ $(id).addEventListener("input",saveCalib); });
 /* Typing a lie by hand re-evaluates the preset highlight, so a chip
    never keeps claiming a range that is no longer in the fields. */
 ["fLieLo","fLieHi"].forEach(function(id){ $(id).addEventListener("input",buildSurf); });
-paintLearned(); renderLog(); renderSuggestions();
+paintLearned(); renderWindows(); renderLog(); renderSuggestions();
 if(suggestions().length) $("dSugg").open=true;
 probeStore();
 </script>

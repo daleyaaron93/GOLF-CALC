@@ -164,14 +164,41 @@ are what this section exists to prevent.
 | Shot behaviour — reach, wind, fixed roll | yes | Shot types |
 | Landing surfaces — roll vs fairway | yes | Landing surface |
 | The eight wind/elevation rates | yes | Wind & elevation |
-| `WINDOWS` — the ~80 per-club dial windows | **no** | not exposed |
+| `WINDOWS` — the per-club/shot dial windows | yes | My windows |
 | `INTERP`, `SURFACES`, `WINDS`, `GREENSPEED` | **no** | reference data, by design |
 | The club lineup itself (13 clubs, fixed) | **no** | no add/remove UI |
 
-**`WINDOWS` is the notable gap.** It holds the measured dial window (max and min) for each
-club/shot pair — 12 clubs, ~80 pairs — and it is the most "measured off your screen" data in
-the app, but there is no UI for it. Correcting one means editing the table in `index.html`.
-If that ever gets a UI it needs a shape that works on a phone; a flat 80-row list will not.
+### My windows
+
+A window is **read, never inferred** — it is the highest and lowest number the power dial
+offers for a club-and-shot pairing, sitting on screen. No quantity of logged shots can produce
+one: where a ball finished says nothing about what the box said. Hence data entry, not learning.
+
+Pick a club, get its legal shots grouped by family, type the two numbers. "Only the gaps"
+filters to what still needs measuring. Overrides live in `WIN_OVERRIDE` and persist inside the
+same calibration key as everything else, so "reset to defaults" restores the shipped tables
+whole.
+
+**Typing a pair deletes its `INTERP` flag automatically.** The table used to carry a comment
+telling whoever measured a pair to remember to delete that key by hand, or the pair would keep
+reporting as estimated. A rule stated only in a comment is dissolved by the first edit that
+forgets it, so it is now a mechanism. Clearing a field restores the shipped pair *and* its
+`INTERP` flag.
+
+**A missing key means two different things** — "the game does not offer this pairing" and
+"nobody has measured it yet" — and the table cannot tell them apart. That is why `attempt()`
+widens to `legal` when nothing measured fits. Without the widening, filling in one club's
+window drops every other club out of the running: while all three wedges lacked a Splash
+window the list emptied and the earlier fallback caught it, but the moment one was filled
+`usable` became that single club. **Filling in real data made the answer worse.** Do not
+remove the widening step.
+
+### Known dead data: `lflop`
+
+`WINDOWS` carries `lflop` pairs for PW, 50°, 56° and 60°, and `INTERP` flags `56°.lflop` — but
+**there is no shot with key `lflop` in `SHOTS`**, so none of it is reachable, and the long
+comment in the table describing how that 56° pair was interpolated protects nothing. Either
+add a Long flop shot or drop the data; it is a game-domain call, not a code one.
 
 ---
 
