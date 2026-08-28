@@ -57,18 +57,29 @@
     box-shadow:0 0 0 1px var(--card-edge),0 24px 60px rgba(30,40,28,.14);}
 
   /* --- masthead ------------------------------------------------ */
-  .brandrow{display:flex;justify-content:space-between;align-items:baseline;
-    padding:24px 2px 16px;border-bottom:1px solid var(--rule);margin-bottom:20px;}
-  .brand{font-family:var(--sans);font-size:9px;letter-spacing:.28em;color:var(--brass);
-    text-transform:uppercase;font-weight:400;}
-  .brand b{font-family:var(--serif);font-size:22px;letter-spacing:.06em;color:var(--green);
-    font-weight:500;text-transform:none;display:block;margin-top:5px;line-height:1;}
-  .dot{width:5px;height:5px;border-radius:50%;background:var(--brass);
-    display:inline-block;margin-right:7px;vertical-align:middle;}
+  .masthead{text-align:center;padding:26px 2px 20px;border-bottom:1px solid var(--rule);
+    margin-bottom:4px;}
+  .mh-eyebrow{font-family:var(--sans);font-size:9.5px;letter-spacing:.34em;
+    text-transform:uppercase;color:var(--brass);font-weight:400;}
+  .mh-title{font-family:var(--serif);font-size:44px;line-height:1.04;color:var(--green);
+    font-weight:500;letter-spacing:.012em;margin:9px 0 11px;}
+  /* Flanked rule: the two hairlines shrink before the label wraps. */
+  .mh-rule{display:flex;align-items:center;justify-content:center;gap:14px;}
+  .mh-rule::before,.mh-rule::after{content:"";height:1px;background:var(--brass-lt);
+    flex:0 1 60px;min-width:16px;}
+  .mh-rule span{font-family:var(--sans);font-size:9px;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--brass);white-space:nowrap;}
   .view{display:none;} .view.on{display:block;}
 
   /* --- fields --------------------------------------------------- */
   .field{margin-bottom:16px;}
+  /* A hairline between each top-level section of the entry view. Direct
+     children only: the two fields inside .pair are one section and must
+     not get a rule between them. */
+  #vEntry > .field, #vEntry > .pair{margin-bottom:0;padding:16px 0;
+    border-top:1px solid var(--rule-soft);}
+  #vEntry > .field:first-child{border-top:0;}
+  #vEntry > .pair > .field{margin-bottom:0;padding:0;border-top:0;}
   .flabel{font-family:var(--sans);font-size:9px;letter-spacing:.28em;color:var(--brass);
     text-transform:uppercase;margin:0 0 8px;display:flex;justify-content:space-between;
     align-items:baseline;gap:10px;font-weight:400;}
@@ -103,12 +114,13 @@
     color:var(--ink-2);background:transparent;border:1px solid var(--field-edge);border-radius:2px;
     padding:0 12px;min-height:38px;display:flex;align-items:center;cursor:pointer;}
   .surf div:active{background:var(--rule-soft);}
+  .surf div.active{background:var(--green);border-color:var(--green);color:var(--card);}
 
   .compass{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;}
   .cbtn{min-height:56px;border:1px solid var(--field-edge);background:transparent;border-radius:2px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
     color:var(--ink-2);gap:3px;}
-  .cbtn .ar{font-family:var(--serif);font-size:18px;line-height:1;}
+  .cbtn .ar{width:19px;height:19px;display:block;transform-origin:50% 50%;}
   .cbtn .tx{font-family:var(--sans);font-size:8px;letter-spacing:.16em;text-transform:uppercase;}
   .cbtn.active{background:var(--green);border-color:var(--green);color:var(--card);}
 
@@ -236,9 +248,10 @@
 <body>
 <div class="device">
 
-  <div class="brandrow">
-    <div class="brand"><span class="dot"></span><b>Plays&nbsp;Like</b> / 2K25</div>
-    <div class="brand" id="verTag">Setup</div>
+  <div class="masthead">
+    <div class="mh-eyebrow">Estill County</div>
+    <div class="mh-title">Plays&nbsp;Like</div>
+    <div class="mh-rule"><span id="verTag">Yardage Lab &middot; 2K25</span></div>
   </div>
 
   <div class="view on" id="vEntry">
@@ -545,15 +558,20 @@ var SURFACES=[
 ];
 
 var WINDS=[
- {key:"qhL",   ar:"\u2198",tx:"Q HEAD L", head:1, cross:1, q:true},
- {key:"head",  ar:"\u2193",tx:"HEAD",     head:1, cross:0},
- {key:"qhR",   ar:"\u2199",tx:"Q HEAD R", head:1, cross:-1,q:true},
- {key:"crossL",ar:"\u2192",tx:"CROSS L\u2192R",head:0,cross:1},
- {key:"none",  ar:"\u00B7",tx:"NONE",     head:0, cross:0},
- {key:"crossR",ar:"\u2190",tx:"CROSS R\u2192L",head:0,cross:-1},
- {key:"qtL",   ar:"\u2197",tx:"Q TAIL L", head:-1,cross:1, q:true},
- {key:"tail",  ar:"\u2191",tx:"TAIL",     head:-1,cross:0},
- {key:"qtR",   ar:"\u2196",tx:"Q TAIL R", head:-1,cross:-1,q:true}
+ /* deg rotates one drawn arrow; null = the calm dot. These used to be
+    typed characters, but the four diagonals (U+2196-2199) carry emoji
+    presentation on iOS and rendered as blue glyph tiles beside the plain
+    text arrows on head/tail/cross. Drawing them keeps all nine identical
+    on every device. 0 = up = tail; clockwise from there. */
+ {key:"qhL",   deg:135, tx:"Q HEAD L", head:1, cross:1, q:true},
+ {key:"head",  deg:180, tx:"HEAD",     head:1, cross:0},
+ {key:"qhR",   deg:225, tx:"Q HEAD R", head:1, cross:-1,q:true},
+ {key:"crossL",deg:90,  tx:"CROSS L\u2192R",head:0,cross:1},
+ {key:"none",  deg:null,tx:"NONE",     head:0, cross:0},
+ {key:"crossR",deg:270, tx:"CROSS R\u2192L",head:0,cross:-1},
+ {key:"qtL",   deg:45,  tx:"Q TAIL L", head:-1,cross:1, q:true},
+ {key:"tail",  deg:0,   tx:"TAIL",     head:-1,cross:0},
+ {key:"qtR",   deg:315, tx:"Q TAIL R", head:-1,cross:-1,q:true}
 ];
 
 var GREENSPEED=[
@@ -579,23 +597,43 @@ function val(id,def){var v=parseFloat($(id).value);return isNaN(v)?def:v;}
 
 function buildSurf(){
   var el=$("surfPresets"); el.innerHTML="";
+  /* Match on the lie numbers actually in the fields, plus `from`.
+     Highlighting on `from` alone lit every preset sharing the bucket:
+     Fairway and Fringe are both turf, and Lt rough / Hvy rough / Mulch
+     are all rough, so one tap lit two or three chips at once. The lo/hi
+     pairs are unique across all seven presets, so this lights exactly
+     one - and nothing at all once the numbers are typed by hand, which
+     is correct: a hand-typed lie is not one of the presets.
+     (It also dropped a border-colour on var(--lcd-dim), a token that
+     stopped existing at the Clubhouse restyle.) */
+  var lo=val("fLieLo",98), hi=val("fLieHi",99);
   SURFACES.forEach(function(s){
     var d=document.createElement("div");
     d.textContent=s.n;
+    if(s.lo===lo && s.hi===hi && s.from===S.from) d.className="active";
     d.onclick=function(){
       $("fLieLo").value=s.lo;$("fLieHi").value=s.hi;
       S.from=s.from; S.shot="auto"; buildSurf(); buildShotChips();
     };
-    if(S.from===s.from) d.style.borderColor="var(--lcd-dim)";
     el.appendChild(d);
   });
+}
+/* One drawn arrow, rotated. currentColor inherits .cbtn / .cbtn.active,
+   so it flips to card cream on the selected cell for free. */
+function windArrow(deg){
+  if(deg===null) return '<svg class="ar" viewBox="0 0 24 24" aria-hidden="true">'+
+    '<circle cx="12" cy="12" r="2.3" fill="currentColor"/></svg>';
+  return '<svg class="ar" viewBox="0 0 24 24" aria-hidden="true" '+
+    'style="transform:rotate('+deg+'deg)"><path d="M12 20.5 L12 3.9 M6.7 9.2 L12 3.9 '+
+    'L17.3 9.2" fill="none" stroke="currentColor" stroke-width="1.7" '+
+    'stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 function buildCompass(){
   var el=$("compass"); el.innerHTML="";
   WINDS.forEach(function(w){
     var d=document.createElement("div");
     d.className="cbtn"+(S.windDir===w.key?" active":"");
-    d.innerHTML='<span class="ar">'+w.ar+'</span><span class="tx">'+w.tx+'</span>';
+    d.innerHTML=windArrow(w.deg)+'<span class="tx">'+w.tx+'</span>';
     d.onclick=function(){S.windDir=w.key;buildCompass();};
     el.appendChild(d);
   });
@@ -725,12 +763,12 @@ $("btnGo").onclick=function(){
   S.wind =Math.abs(val("fWind",0));
   compute();
   $("vEntry").classList.remove("on"); $("vResult").classList.add("on");
-  $("verTag").textContent="Result";
+  $("verTag").textContent="Yardage Lab \u00B7 Result";
   window.scrollTo({top:0,behavior:"smooth"});
 };
 $("btnBack").onclick=function(){
   $("vResult").classList.remove("on"); $("vEntry").classList.add("on");
-  $("verTag").textContent="Setup";
+  $("verTag").textContent="Yardage Lab \u00B7 2K25";
   window.scrollTo({top:0,behavior:"smooth"});
 };
 
@@ -1376,6 +1414,9 @@ buildSurf(); buildCompass(); buildLandChips(); buildGsChips(); buildShotChips();
 buildBag(); buildShotRows(); buildLandRows();
 
 RATE_IDS.forEach(function(id){ $(id).addEventListener("input",saveCalib); });
+/* Typing a lie by hand re-evaluates the preset highlight, so a chip
+   never keeps claiming a range that is no longer in the fields. */
+["fLieLo","fLieHi"].forEach(function(id){ $(id).addEventListener("input",buildSurf); });
 paintLearned(); renderLog(); renderSuggestions();
 if(suggestions().length) $("dSugg").open=true;
 probeStore();

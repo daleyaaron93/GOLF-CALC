@@ -122,6 +122,13 @@ filters `BAG` to usable clubs, then `solve()` binary-searches the dial that stop
 target, using `fly()` to model carry → roll → stop across the lie range. Output is painted
 into `.screen`.
 
+**Lie presets.** `buildSurf()` lights the preset whose `lo`/`hi` match the numbers in the
+fields *and* whose `from` matches `S.from`. It previously matched on `from` alone, which lit
+every preset sharing the bucket — Fairway and Fringe are both `turf`, and Lt rough, Hvy
+rough and Mulch are all `rough`, so a single tap lit two or three chips. The seven lo/hi
+pairs are unique, so this lights exactly one; typing a lie by hand lights none, which is
+correct, since a hand-typed lie is not one of the presets.
+
 **Calibration:** six `<details>` drawers on the entry view — bag, shot types, landing
 surface, wind/elevation rates, plus the shot log and suggestions added in v10. The first
 four edit the live tables in place.
@@ -270,6 +277,23 @@ name, and italic asides. Jost for labels — always uppercase, 9px, `letter-spac
 pronounced shadow, under the green plate. No gradients, no glow.
 
 **Hit targets.** Steppers 46–56px, chips 38px, compass cells 56px.
+
+**Masthead.** Centred stack: `ESTILL COUNTY` eyebrow in brass, `Plays Like` at 44px in
+green serif, then a hairline-flanked line. That bottom line is also the view indicator —
+`YARDAGE LAB · 2K25` on setup, `YARDAGE LAB · RESULT` on the result view (`#verTag`).
+The flanking rules are `::before`/`::after` on `.mh-rule` and shrink before the label wraps.
+
+**Section rules.** One hairline between each top-level section of the entry view, via
+`#vEntry > .field, #vEntry > .pair`. Direct children only — the two fields inside `.pair`
+(elevation and must-carry) are one section and must not be split by a rule.
+
+**Compass arrows are drawn, not typed.** Each cell renders one inline SVG arrow rotated by
+the `deg` field on `WINDS` (0 = up = tail, clockwise). They used to be characters, but the
+four diagonals — `U+2196`–`U+2199`, i.e. exactly the four quartering cells — carry emoji
+presentation on iOS and rendered as blue glyph tiles beside the plain text arrows on
+head/tail/cross. `currentColor` means the arrow flips to card cream on the active cell for
+free. The `→` inside the *labels* `CROSS L→R` / `CROSS R→L` is still a character, and is
+fine: `U+2192` defaults to text presentation.
 
 The icon is a deep green field with brass pin and pennant, cream ball, double hairline
 ring. Artwork bleeds to the full edge of the square so iOS's own corner mask does all the
