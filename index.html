@@ -192,6 +192,42 @@
     color:var(--ink-mute);padding:10px 2px 6px;}
   .src{font-family:var(--sans);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;
     color:var(--brass);font-style:normal;}
+  /* --- shot log + suggestions (v10) ------------------------------ */
+  .logbtn{width:100%;margin-top:14px;padding:0;min-height:52px;border-radius:2px;
+    border:1px solid var(--brass);background:transparent;color:var(--brass);
+    font-family:var(--sans);font-size:9px;letter-spacing:.28em;text-transform:uppercase;cursor:pointer;}
+  .logbtn:active{background:rgba(154,123,63,.09);}
+  .logbtn.done{border-color:var(--green);color:var(--green);}
+  .logpanel{display:none;margin-top:12px;}
+  .logpanel.on{display:block;}
+  .logerr{font-family:var(--serif);font-size:14.5px;line-height:1.5;color:#8f4f22;
+    padding:0 2px 8px;display:none;}
+  .logerr.show{display:block;}
+  .logrow{display:flex;align-items:center;gap:9px;font-family:var(--sans);font-size:10px;
+    letter-spacing:.04em;color:var(--ink-2);padding:9px 2px;border-bottom:1px solid var(--rule-soft);}
+  .logrow .when{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-mute);
+    min-width:32px;}
+  .logrow .what{flex:1;}
+  .logrow .err{font-family:var(--serif);font-size:15px;color:var(--ink);white-space:nowrap;}
+  .logrow .del{border:1px solid var(--field-edge);background:transparent;color:var(--ink-faint);
+    border-radius:2px;min-width:30px;min-height:30px;line-height:1;font-size:14px;cursor:pointer;}
+  /* A proposal is bordered in brass, never in green: it is an offer to
+     change a number, not a number the app already trusts. */
+  .sugg{border:1px solid var(--brass);border-radius:2px;padding:15px 14px;margin:12px 0;}
+  .sugg .sh{font-family:var(--serif);font-size:17px;line-height:1.45;color:var(--ink);}
+  .sugg .sb{font-family:var(--serif);font-size:17px;line-height:1.45;color:var(--green);margin-top:7px;}
+  .sugg .sn{font-family:var(--sans);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-faint);line-height:1.8;margin-top:10px;}
+  .sbtns{display:flex;gap:9px;margin-top:13px;}
+  .sbtns button{flex:1;min-height:44px;border-radius:2px;font-family:var(--sans);font-size:9px;
+    letter-spacing:.24em;text-transform:uppercase;cursor:pointer;}
+  .sbtns .acc{border:1px solid var(--green);background:var(--green);color:var(--card);}
+  .sbtns .dis{border:1px solid var(--field-edge);background:transparent;color:var(--ink-mute);}
+  .tag.learn{background:rgba(154,123,63,.14);color:var(--brass);border:1px solid var(--brass);}
+  .row input.learned{border-color:var(--brass);}
+  .reset.danger{color:var(--warn-edge);border-color:var(--warn-edge);}
+  .empty{font-family:var(--serif);font-style:italic;font-size:14px;line-height:1.6;
+    color:var(--ink-faint);padding:10px 2px;}
   .footer{text-align:center;font-family:var(--sans);font-size:8.5px;color:var(--ink-faint);
     letter-spacing:.28em;text-transform:uppercase;margin-top:24px;padding-top:16px;
     border-top:1px solid var(--rule);line-height:2;}
@@ -304,6 +340,29 @@
       <div class="row"><span class="lbl">Quartering factor</span><span class="tag ok">SRC</span><input type="number" step=".05" id="cQuarter" value="0.7"></div>
       <div class="row"><span class="lbl">Elevation ft per yd</span><span class="tag ok">SRC</span><input type="number" step=".1" id="cElev" value="3"></div>
     </details>
+
+    <details id="dLog">
+      <summary id="logSummary">Shot log</summary>
+      <div class="note">Every logged shot, newest first. The two figures are carry error and
+      roll error in yards &mdash; positive means it went further than the model said. Nothing
+      lateral is recorded: distance is the part people judge reliably.</div>
+      <div id="logList"></div>
+      <button class="reset" id="btnLogExport">Export log (JSON)</button>
+    </details>
+
+    <details id="dSugg">
+      <summary id="suggSummary">Suggestions</summary>
+      <div class="note">Worked out from your own logged shots. Nothing here is ever applied
+      on its own &mdash; a number only changes when you press Accept, and it stays tagged
+      <span class="tag learn">LEARNED</span> afterwards so it never reads as measured.</div>
+      <div id="suggList"></div>
+    </details>
+
+    <div class="note" id="learnNote"></div>
+    <div class="note" id="storeNote"></div>
+    <button class="reset danger" id="btnCalReset">Reset calibration to defaults</button>
+    <div class="note">Puts every number in these four drawers back to the values the app
+    shipped with. Your shot log is data, not a setting &mdash; it is kept.</div>
   </div>
 
   <div class="view" id="vResult">
@@ -330,6 +389,26 @@
       <div class="alts" id="altsRow"></div>
       <div class="recap" id="recapRow"></div>
     </div>
+    <button class="logbtn" id="btnLogOpen">Log this shot</button>
+    <div class="logpanel" id="logPanel">
+      <div class="note">Only worth logging if you hit it where you meant to and the green
+      behaved &mdash; anything left over is the model&rsquo;s error, not yours. Two numbers:
+      where it first landed, and where it finished.</div>
+      <div class="pair">
+        <div class="field">
+          <div class="flabel"><span>Landed at</span></div>
+          <input class="inp" id="fActLand" type="number" inputmode="numeric" placeholder="0">
+        </div>
+        <div class="field">
+          <div class="flabel"><span>Stopped at</span></div>
+          <input class="inp" id="fActStop" type="number" inputmode="numeric" placeholder="0">
+        </div>
+      </div>
+      <div class="logerr" id="logErr"></div>
+      <button class="go" id="btnLogSave">Save to log</button>
+      <button class="reset" id="btnLogCancel">Cancel</button>
+    </div>
+
     <button class="back" id="btnBack">&#8592; Change conditions</button>
   </div>
 
@@ -580,7 +659,8 @@ function buildBag(){
   });
   el.querySelectorAll("input").forEach(function(i){
     i.addEventListener("input",function(e){
-      BAG[+e.target.dataset.i][e.target.dataset.f]=parseFloat(e.target.value)||0;});
+      BAG[+e.target.dataset.i][e.target.dataset.f]=parseFloat(e.target.value)||0;
+      saveCalib();});
   });
 }
 function buildLandRows(){
@@ -594,7 +674,8 @@ function buildLandRows(){
   });
   el.querySelectorAll("input").forEach(function(i){
     i.addEventListener("input",function(e){
-      LANDING[+e.target.dataset.i].mult=parseFloat(e.target.value)||0;});
+      LANDING[+e.target.dataset.i].mult=parseFloat(e.target.value)||0;
+      saveCalib();});
   });
 }
 function buildShotRows(){
@@ -619,7 +700,8 @@ function buildShotRows(){
   });
   el.querySelectorAll("input").forEach(function(i){
     i.addEventListener("input",function(e){
-      SHOTS[+e.target.dataset.i][e.target.dataset.f]=parseFloat(e.target.value)||0;});
+      SHOTS[+e.target.dataset.i][e.target.dataset.f]=parseFloat(e.target.value)||0;
+      saveCalib();});
   });
 }
 $("udUp").onclick=function(){S.elevUp=true;$("udUp").classList.add("active");$("udDown").classList.remove("active");};
@@ -659,7 +741,11 @@ function autoShot(dist,wind,lieMid){
   if(dist<=30)  return g("chip");
   if(dist<=60)  return g("spin");
   if(dist<100)  return g("pitch");
-  if(wind>=12)  return g("knock");
+  /* lknock, not "knock" - there is no shot with that key, and the
+     lookup returned undefined here, taking compute() down with it on
+     any windy 100+ yd shot on Auto. Long knockdown is the shot: wind
+     multiplier 0.60, irons, off turf and rough. */
+  if(wind>=12)  return g("lknock");
   return g("appr");
 }
 
@@ -692,14 +778,25 @@ function compute(){
   function fly(D,L,ratio,club){
     var carry=D*(L/100);
     carry-=elevCost;
+    /* Which rate fired, and what it cost, is recorded on the way out.
+       The shot log reads these off the result rather than re-deriving
+       them later - re-deriving is how a learning pass ends up
+       correcting a rate that never ran on that shot. */
+    var rateId=null, windYd=0;
     if(headMph>0){
-      var rate=carry>=num("cFullThresh")?num("cHeadFull"):num("cHeadApp");
-      carry-=headMph*rate;
-    } else if(headMph<0){ carry-=headMph*num("cTail"); }
+      rateId=carry>=num("cFullThresh")?"cHeadFull":"cHeadApp";
+      windYd=headMph*num(rateId);
+      carry-=windYd;
+    } else if(headMph<0){
+      rateId="cTail";
+      windYd=headMph*num("cTail");
+      carry-=windYd;
+    }
     carry=Math.max(1,carry);
     var gr=(S.land==="green"||S.land==="fringe")?(club.gr||1):1;
     var roll=(shot.roll>0?shot.roll:carry*ratio)*landMult*gr;
-    return {carry:carry,roll:roll,stop:carry+roll};
+    return {carry:carry,roll:roll,stop:carry+roll,
+            rateId:rateId,windYd:windYd,elevYd:elevCost,gr:gr};
   }
 
   /* solve the dial that stops on target at the middle of the lie range */
@@ -791,10 +888,497 @@ function compute(){
   if(S.haz) bits.push("carry "+S.haz);
   if(spread>=2) bits.push(Math.round(spread)+" yd lie spread");
   $("recapRow").textContent=bits.join("  \u00B7  ");
+
+  /* Everything the log needs, captured at the moment the shot was
+     prescribed. Nothing here is recomputed at log time - the person may
+     well have gone back and changed a field before pressing Log. */
+  LAST={
+    club:R.club.name, shotKey:shot.key, shotName:shot.name, auto:(S.shot==="auto"),
+    dial:Math.round(R.dial), power:Math.round(R.power*100), measured:R.measured,
+    target:S.dist, elevFt:S.elev, windMph:S.wind, windDir:S.windDir, windTx:wd.tx,
+    lieLo:S.lieLo, lieHi:S.lieHi, land:S.land, landName:landSurf.name,
+    gspeed:(S.land==="green"||S.land==="fringe")?S.gspeed:null,
+    pred:{carry:r1(R.mid.carry), roll:r1(R.mid.roll), stop:r1(R.mid.stop),
+          carryLo:r1(R.worst.carry), carryHi:r1(R.best.carry),
+          stopLo:r1(R.worst.stop),   stopHi:r1(R.best.stop)},
+    /* attribution inputs for the learning pass */
+    headMph:r2(headMph), rateId:R.mid.rateId, windYd:r1(R.mid.windYd),
+    elevYd:r1(R.mid.elevYd), gr:R.mid.gr,
+    /* context only - the learning pass never reads these, because
+       lateral judgment is the least reliable thing a person reports */
+    aimYd:Math.round(aimYd), aimDir:aimDir, shape:shapeRx
+  };
+  resetLogPanel();
 }
+
+
+/* ================================================================
+   v10 - PERSISTENCE
+   Every number a person can edit in the drawers below is saved to
+   this device. The baked-in tables above stay the defaults: a saved
+   value is laid over them on load, and "reset to defaults" wipes the
+   saved layer and puts the shipped numbers back.
+
+   WINDOWS and INTERP are deliberately NOT saved. They are reference
+   data - measured off the game screen, or interpolated and flagged as
+   such - not preferences. A saved copy would also silently outrank a
+   corrected table shipped in a later version, which is the reverse of
+   what those tables are for.
+   ================================================================ */
+var LS_CALIB="playslike.calib.v1";
+var LS_LOG  ="playslike.log.v1";
+var LS_SUGG ="playslike.sugg.v1";
+
+/* Storage can throw outright, not just come back empty: private
+   windows and blocked site data both raise on access. Every read and
+   write is guarded so the app carries on with shipped defaults rather
+   than dying on boot. */
+var STORE_OK=true;
+function lsGet(k,def){
+  try{ var raw=localStorage.getItem(k); return raw==null?def:JSON.parse(raw); }
+  catch(e){ STORE_OK=false; return def; }
+}
+function lsSet(k,v){
+  try{ localStorage.setItem(k,JSON.stringify(v)); return true; }
+  catch(e){ STORE_OK=false; return false; }
+}
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){ STORE_OK=false; } }
+
+function r1(n){ return Math.round(n*10)/10; }
+function r2(n){ return Math.round(n*100)/100; }
+function sgn(n){ return (n>0?"+":"")+n; }
+
+var RATE_IDS=["cTail","cHeadApp","cHeadFull","cFullThresh","cCross","cCrossRef","cQuarter","cElev"];
+var RATE_LABEL={cTail:"tailwind",cHeadApp:"headwind on approaches",cHeadFull:"headwind on full shots",
+  cFullThresh:"full-shot threshold",cCross:"crosswind",cCrossRef:"crosswind reference",
+  cQuarter:"quartering factor",cElev:"elevation ft per yd"};
+var BAG_FIELDS=["min","max","total","gr"];
+var SHOT_FIELDS=["maxPct","windMult","roll"];
+
+/* Snapshot of the shipped numbers, taken before any saved layer is
+   applied. This is what "reset to defaults" restores. */
+var DEFAULTS=null;
+function captureDefaults(){
+  DEFAULTS={bag:{},land:{},shots:{},rates:{}};
+  BAG.forEach(function(c){ var o={}; BAG_FIELDS.forEach(function(f){o[f]=c[f];}); DEFAULTS.bag[c.name]=o; });
+  LANDING.forEach(function(l){ DEFAULTS.land[l.key]=l.mult; });
+  SHOTS.forEach(function(s){ var o={}; SHOT_FIELDS.forEach(function(f){o[f]=s[f];}); DEFAULTS.shots[s.key]=o; });
+  /* defaultValue is the value="" written in the markup - it stays put
+     even after the person has typed over the field. */
+  RATE_IDS.forEach(function(id){ DEFAULTS.rates[id]=parseFloat($(id).defaultValue); });
+}
+
+/* Which values the learning pass has changed, and off how many shots.
+   Kept so an adjusted number stays visibly flagged instead of passing
+   itself off as something that was measured. */
+var LEARNED={};
+
+function applyCalib(){
+  var c=lsGet(LS_CALIB,null);
+  if(!c) return;
+  /* Keyed by name/key, never by index, so reordering a table above
+     cannot shift a saved value onto the wrong club. */
+  if(c.bag) BAG.forEach(function(club){
+    var s=c.bag[club.name]; if(!s) return;
+    BAG_FIELDS.forEach(function(f){ if(typeof s[f]==="number") club[f]=s[f]; });
+  });
+  if(c.land) LANDING.forEach(function(l){
+    if(typeof c.land[l.key]==="number") l.mult=c.land[l.key];
+  });
+  if(c.shots) SHOTS.forEach(function(s){
+    var v=c.shots[s.key]; if(!v) return;
+    SHOT_FIELDS.forEach(function(f){ if(typeof v[f]==="number") s[f]=v[f]; });
+  });
+  if(c.rates) RATE_IDS.forEach(function(id){
+    if(typeof c.rates[id]==="number") $(id).value=c.rates[id];
+  });
+  LEARNED=c.learned||{};
+}
+
+function saveCalib(){
+  var c={bag:{},land:{},shots:{},rates:{},learned:LEARNED};
+  BAG.forEach(function(club){ var o={}; BAG_FIELDS.forEach(function(f){o[f]=club[f];}); c.bag[club.name]=o; });
+  LANDING.forEach(function(l){ c.land[l.key]=l.mult; });
+  SHOTS.forEach(function(s){ var o={}; SHOT_FIELDS.forEach(function(f){o[f]=s[f];}); c.shots[s.key]=o; });
+  RATE_IDS.forEach(function(id){ c.rates[id]=parseFloat($(id).value)||0; });
+  lsSet(LS_CALIB,c);
+}
+
+function resetCalib(){
+  BAG.forEach(function(club){ var d=DEFAULTS.bag[club.name];
+    if(d) BAG_FIELDS.forEach(function(f){ club[f]=d[f]; }); });
+  LANDING.forEach(function(l){ if(l.key in DEFAULTS.land) l.mult=DEFAULTS.land[l.key]; });
+  SHOTS.forEach(function(s){ var d=DEFAULTS.shots[s.key];
+    if(d) SHOT_FIELDS.forEach(function(f){ s[f]=d[f]; }); });
+  RATE_IDS.forEach(function(id){ $(id).value=DEFAULTS.rates[id]; });
+  LEARNED={};
+  lsDel(LS_CALIB);
+  /* The shot log is data, not a setting. It deliberately survives a
+     calibration reset - losing a season of shots to a settings wipe is
+     the exact failure the export exists to guard against. */
+  buildBag(); buildShotRows(); buildLandRows(); paintLearned(); renderSuggestions();
+}
+
+/* ================================================================
+   v10 - SHOT LOG
+   Pressed by hand, and only for a shot worth counting: the ball went
+   where it was aimed, and whatever error is left belongs to the model
+   rather than to a slope or a green running away. That judgment is the
+   filter. There is deliberately no slope tagging and no auto-detection.
+
+   Two numbers are entered - where it LANDED and where it STOPPED -
+   because they separate the two error types the learning pass keeps
+   apart: a carry error (landed short or long) points at the wind or
+   elevation rates, a roll error (landed right, finished wrong) points
+   at the club's green-roll factor.
+
+   Nothing lateral is recorded. People judge distance far better than
+   they judge direction, so a left/right figure would be the least
+   reliable number in the file. The predicted aim is stored as context
+   and is never read by the learning pass.
+   ================================================================ */
+var LAST=null;
+
+function getLog(){ var l=lsGet(LS_LOG,[]); return Array.isArray(l)?l:[]; }
+function setLog(l){ return lsSet(LS_LOG,l); }
+
+function resetLogPanel(){
+  var b=$("btnLogOpen"); if(!b) return;
+  b.textContent="Log this shot"; b.classList.remove("done");
+  $("logPanel").classList.remove("on");
+  $("fActLand").value=""; $("fActStop").value="";
+  $("logErr").classList.remove("show");
+}
+
+function fmtWhen(ts){ var d=new Date(ts); return (d.getMonth()+1)+"/"+d.getDate(); }
+
+function renderLog(){
+  var log=getLog();
+  $("logSummary").textContent="Shot log"+(log.length?" — "+log.length+" shot"+(log.length===1?"":"s"):"");
+  $("btnLogExport").style.display=log.length?"block":"none";
+  var el=$("logList"); el.innerHTML="";
+  if(!log.length){
+    el.innerHTML='<div class="empty">Nothing logged yet. Play a shot, then press '+
+      '&ldquo;Log this shot&rdquo; on the result.</div>';
+    return;
+  }
+  log.slice().reverse().slice(0,30).forEach(function(e){
+    var carryErr=r1(e.actLand-e.pred.carry);
+    var rollErr =r1((e.actStop-e.actLand)-e.pred.roll);
+    var r=document.createElement("div"); r.className="logrow";
+    r.innerHTML='<span class="when">'+fmtWhen(e.ts)+'</span>'+
+      '<span class="what">'+e.club+' · '+e.shotName+' · '+e.target+' yd</span>'+
+      '<span class="err">'+sgn(carryErr)+' / '+sgn(rollErr)+'</span>';
+    var b=document.createElement("button");
+    b.className="del"; b.textContent="×"; b.title="Delete this entry";
+    b.onclick=function(){
+      setLog(getLog().filter(function(x){return x.id!==e.id;}));
+      renderLog(); renderSuggestions();
+    };
+    r.appendChild(b); el.appendChild(r);
+  });
+  if(log.length>30)
+    el.insertAdjacentHTML("beforeend",
+      '<div class="empty">Showing the last 30 of '+log.length+'. Export for the full set.</div>');
+}
+
+/* ================================================================
+   v10 - LEARNING
+   Proposes, never applies. Nothing below writes a calibration value
+   without a person pressing Accept, and anything it does change stays
+   tagged LEARNED afterwards. An auto-tuning model that quietly
+   rewrites its own constants is the same failure as an estimate
+   presented as measured data, one step further removed.
+   ================================================================ */
+var SUGG_MIN=5;            /* clean shots with a club before anything is offered */
+var SUGG_MIN_CHANGE=0.08;  /* below an 8% correction, it is noise - stay quiet */
+
+function suggestions(){
+  var log=getLog(), out=[];
+  var flat=function(e){ return !e.elevFt; };
+  var calm=function(e){ return !e.windYd; };
+
+  /* A shot logged BEFORE a value was accepted was scored against the
+     old value, so it cannot testify about the new one. Without this
+     watermark the same five shots keep re-proving the same correction
+     and the factor compounds on every Accept - 0.52 to 0.77 to 1.14 and
+     onward, off no new evidence at all. Accepting a suggestion settles
+     it until fresh shots say otherwise. */
+  var since=function(key){ var L=LEARNED[key]; return (L&&L.at)?L.at:0; };
+
+  /* --- roll error -> the club's green-roll factor ------------------
+     gr only multiplies when the ball lands on green or fringe, so only
+     those shots can say anything about it. Shots that spun backwards
+     are excluded: a negative roll is real in this game, but it cannot
+     be expressed as a multiplier on a forward-roll model. */
+  BAG.forEach(function(club){
+    var rows=log.filter(function(e){
+      return e.club===club.name && (e.land==="green"||e.land==="fringe") &&
+             e.pred && e.pred.roll>=1 && e.gr>0 && (e.actStop-e.actLand)>=0 &&
+             e.ts>since("gr:"+club.name);
+    });
+    if(rows.length<SUGG_MIN) return;
+    var actual=0, predicted=0;
+    rows.forEach(function(e){ actual+=(e.actStop-e.actLand); predicted+=e.pred.roll; });
+    if(predicted<=0) return;
+    var ratio=actual/predicted;
+    var now=club.gr, next=r2(Math.max(0,Math.min(3,now*ratio)));
+    if(!(now>0) || Math.abs(next-now)/now < SUGG_MIN_CHANGE) return;
+    out.push({
+      key:"gr:"+club.name, n:rows.length,
+      head:"Your "+club.name+" is rolling "+Math.round(Math.abs(ratio-1)*100)+"% "+
+           (ratio>1?"longer":"shorter")+" than the model.",
+      body:"Update its green-roll factor from "+now.toFixed(2)+" to "+next.toFixed(2)+"?",
+      note:"From "+rows.length+" logged shots onto green or fringe.",
+      apply:function(){ club.gr=next; LEARNED["gr:"+club.name]={n:rows.length,at:Date.now()}; }
+    });
+  });
+
+  /* --- carry error -> the wind and elevation rates -----------------
+     Each bucket is deliberately clean: a shot only teaches the headwind
+     rate if the ground was flat, and only teaches the elevation rate if
+     there was no wind. A shot with both cannot say which of the two was
+     wrong, and splitting the blame between them would be invented
+     precision - the one thing this app is built not to do.
+
+     Each row is scored against the rate that actually fired on it
+     (e.windYd), not against today's value, so changing a rate midway
+     through a season does not corrupt the earlier shots. */
+  [["cHeadFull"],["cHeadApp"],["cTail"]].forEach(function(pair){
+    var id=pair[0];
+    var rows=log.filter(function(e){
+      return e.rateId===id && flat(e) && e.headMph && e.ts>since("rate:"+id); });
+    if(rows.length<SUGG_MIN) return;
+    var trueCost=0, mph=0, errSum=0;
+    rows.forEach(function(e){
+      var err=e.actLand-e.pred.carry;   /* + = flew further than predicted */
+      trueCost+=(e.windYd-err); mph+=e.headMph; errSum+=err;
+    });
+    if(!mph) return;
+    var now=parseFloat($(id).value)||0;
+    var next=r2(trueCost/mph);
+    if(!(now>0) || !(next>0) || Math.abs(next-now)/now < SUGG_MIN_CHANGE) return;
+    var avg=r1(errSum/rows.length);
+    out.push({
+      key:"rate:"+id, n:rows.length,
+      head:"Into "+RATE_LABEL[id]+", your shots are landing "+Math.abs(avg)+" yd "+
+           (avg>0?"long":"short")+" on average.",
+      body:"Update the "+RATE_LABEL[id]+" rate from "+now.toFixed(2)+" to "+next.toFixed(2)+"?",
+      note:"From "+rows.length+" logged shots with wind and no elevation change.",
+      apply:function(){ $(id).value=next.toFixed(2); LEARNED["rate:"+id]={n:rows.length,at:Date.now()}; }
+    });
+  });
+
+  /* Elevation, signed. Up and down shots are folded together by
+     normalising each row against the direction it played, so a mixed
+     sample cannot cancel itself out to nonsense. */
+  var erows=log.filter(function(e){
+    return e.elevFt && calm(e) && e.elevYd && e.ts>since("rate:cElev"); });
+  if(erows.length>=SUGG_MIN){
+    var absFt=0, trueYd=0, esum=0;
+    erows.forEach(function(e){
+      var dir=e.elevFt>0?1:-1, err=e.actLand-e.pred.carry;
+      absFt+=Math.abs(e.elevFt);
+      trueYd+=Math.abs(e.elevYd)-dir*err;
+      esum+=err;
+    });
+    var nowE=parseFloat($("cElev").value)||0;
+    if(trueYd>0.5 && nowE>0){
+      var nextE=Math.round((absFt/trueYd)*10)/10;
+      if(nextE>0 && Math.abs(nextE-nowE)/nowE >= SUGG_MIN_CHANGE){
+        var avgE=r1(esum/erows.length);
+        out.push({
+          key:"rate:cElev", n:erows.length,
+          head:"On uphill and downhill shots, you are landing "+Math.abs(avgE)+" yd "+
+               (avgE>0?"long":"short")+" on average.",
+          body:"Update elevation ft per yd from "+nowE.toFixed(1)+" to "+nextE.toFixed(1)+"?",
+          note:"From "+erows.length+" logged shots with elevation and no wind.",
+          apply:function(){ $("cElev").value=nextE.toFixed(1);
+                            LEARNED["rate:cElev"]={n:erows.length,at:Date.now()}; }
+        });
+      }
+    }
+  }
+
+  /* --- carry error with nothing to blame ---------------------------
+     Shots with no wind and no elevation cannot indict either rate. If
+     carry is systematically off there, the bag numbers are the suspect
+     - and those are read straight off the game screen, so this surfaces
+     as a note with no Accept button. The model does not get to
+     overwrite measured data on its own say-so. */
+  var base=log.filter(function(e){ return calm(e) && flat(e); });
+  if(base.length>=SUGG_MIN){
+    var m=0; base.forEach(function(e){ m+=(e.actLand-e.pred.carry); });
+    m=r1(m/base.length);
+    if(Math.abs(m)>=2) out.push({
+      key:"base:carry", n:base.length,
+      head:"With no wind and no elevation, you are landing "+Math.abs(m)+" yd "+
+           (m>0?"long":"short")+" on average.",
+      body:"",
+      note:"From "+base.length+" logged shots. This points at your bag numbers, not at the "+
+           "wind or elevation rates - so nothing is proposed here. Worth a look at your carry "+
+           "distances on the game's bag screen.",
+      apply:null
+    });
+  }
+
+  /* A dismissed suggestion stays gone until the evidence for it has
+     grown by another full sample - so it neither nags nor buries
+     itself the moment the person disagrees once. */
+  var dis=lsGet(LS_SUGG,{})||{};
+  return out.filter(function(s){
+    var d=dis[s.key];
+    return !d || s.n >= (d.n||0)+SUGG_MIN;
+  });
+}
+
+function renderSuggestions(){
+  var list=suggestions();
+  $("suggSummary").textContent="Suggestions"+(list.length?" — "+list.length+" waiting":"");
+  var el=$("suggList"); el.innerHTML="";
+  if(!list.length){
+    el.innerHTML='<div class="empty">Nothing to propose. It takes '+SUGG_MIN+
+      ' logged shots before a suggestion appears, and nothing is ever changed without you '+
+      'pressing Accept. Once you accept one, it takes '+SUGG_MIN+' fresh shots before that '+
+      'number is questioned again \u2014 the earlier ones were judged against the old value.</div>';
+    return;
+  }
+  list.forEach(function(s){
+    var d=document.createElement("div"); d.className="sugg";
+    var h='<div class="sh">'+s.head+'</div>';
+    if(s.body) h+='<div class="sb">'+s.body+'</div>';
+    h+='<div class="sn">'+s.note+'</div>';
+    d.innerHTML=h;
+    var btns=document.createElement("div"); btns.className="sbtns";
+    if(s.apply){
+      var a=document.createElement("button"); a.className="acc"; a.textContent="Accept";
+      a.onclick=function(){
+        s.apply(); saveCalib();
+        buildBag(); buildShotRows(); buildLandRows(); paintLearned(); renderSuggestions();
+      };
+      btns.appendChild(a);
+    }
+    var x=document.createElement("button"); x.className="dis";
+    x.textContent=s.apply?"Dismiss":"Understood";
+    x.onclick=function(){
+      var dis=lsGet(LS_SUGG,{})||{};
+      dis[s.key]={n:s.n,at:Date.now()};
+      lsSet(LS_SUGG,dis); renderSuggestions();
+    };
+    btns.appendChild(x);
+    d.appendChild(btns); el.appendChild(d);
+  });
+}
+
+/* A value the learning pass changed is not a measured value. It gets a
+   LEARNED tag where its row has space for one, a brass border where it
+   does not, and a line naming every field it has touched. */
+function paintLearned(){
+  BAG.forEach(function(c,i){
+    var inp=document.querySelector('#bagRows input[data-i="'+i+'"][data-f="gr"]');
+    if(inp) inp.classList.toggle("learned",!!LEARNED["gr:"+c.name]);
+  });
+  RATE_IDS.forEach(function(id){
+    var inp=$(id), row=inp.closest(".row"); if(!row) return;
+    var tag=row.querySelector(".tag"); if(!tag) return;
+    if(!tag.dataset.orig){ tag.dataset.orig=tag.textContent; tag.dataset.origcls=tag.className; }
+    var L=LEARNED["rate:"+id];
+    if(L){ tag.textContent="LEARNED"; tag.className="tag learn"; }
+    else  { tag.textContent=tag.dataset.orig; tag.className=tag.dataset.origcls; }
+    inp.classList.toggle("learned",!!L);
+  });
+  var keys=Object.keys(LEARNED), n=$("learnNote");
+  if(!n) return;
+  n.innerHTML=keys.length
+    ? "Adjusted from your shot log, not measured: "+keys.map(function(k){
+        return k.indexOf("gr:")===0
+          ? k.slice(3)+" green roll ("+LEARNED[k].n+" shots)"
+          : RATE_LABEL[k.slice(5)]+" ("+LEARNED[k].n+" shots)";
+      }).join(", ")+"."
+    : "";
+}
+
+/* ---- wiring ---------------------------------------------------- */
+$("btnLogOpen").onclick=function(){
+  if(!LAST) return;
+  var p=$("logPanel"), open=!p.classList.contains("on");
+  p.classList.toggle("on",open);
+  if(open){
+    $("fActLand").placeholder=Math.round(LAST.pred.carry);
+    $("fActStop").placeholder=Math.round(LAST.pred.stop);
+    $("fActLand").focus();
+  }
+};
+$("btnLogCancel").onclick=function(){ resetLogPanel(); };
+$("btnLogSave").onclick=function(){
+  var err=$("logErr");
+  function bad(m){ err.textContent=m; err.classList.add("show"); }
+  err.classList.remove("show");
+  if(!LAST){ bad("No shot to log — work one out first."); return; }
+  var land=parseFloat($("fActLand").value), stop=parseFloat($("fActStop").value);
+  if(isNaN(land)||isNaN(stop)){ bad("Both numbers are needed — where it landed and where it stopped."); return; }
+  if(land<=0||stop<=0){ bad("Those need to be real yardages."); return; }
+  var e=JSON.parse(JSON.stringify(LAST));
+  e.id="s"+Date.now()+"-"+Math.round(Math.random()*1e6);
+  e.ts=Date.now(); e.actLand=land; e.actStop=stop;
+  var log=getLog(); log.push(e);
+  if(!setLog(log)){ bad("This device is not saving — the shot could not be written."); return; }
+  $("btnLogOpen").textContent="Logged — "+log.length+" in the book";
+  $("btnLogOpen").classList.add("done");
+  $("logPanel").classList.remove("on");
+  $("fActLand").value=""; $("fActStop").value="";
+  renderLog(); renderSuggestions();
+};
+
+$("btnLogExport").onclick=function(){
+  var log=getLog(); if(!log.length) return;
+  var payload={app:"Plays Like",schema:LS_LOG,exported:new Date().toISOString(),
+               count:log.length,shots:log};
+  var url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
+  var a=document.createElement("a");
+  a.href=url; a.download="playslike-log-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); },2000);
+};
+
+/* Two taps rather than a confirm() dialog - a modal here would block
+   the whole page on a phone, and this is reversible by retyping. */
+var calArmed=false, calTimer=null;
+$("btnCalReset").onclick=function(){
+  var b=$("btnCalReset");
+  if(!calArmed){
+    calArmed=true; b.textContent="Tap again to restore shipped numbers";
+    calTimer=setTimeout(function(){ calArmed=false; b.textContent="Reset calibration to defaults"; },4000);
+    return;
+  }
+  clearTimeout(calTimer); calArmed=false;
+  resetCalib();
+  b.textContent="Restored — shot log kept";
+  setTimeout(function(){ b.textContent="Reset calibration to defaults"; },2600);
+};
+
+function probeStore(){
+  var ok=lsSet("playslike.probe",1); lsDel("playslike.probe");
+  if(!ok||!STORE_OK)
+    $("storeNote").innerHTML="This browser is not saving anything — a private window, or site "+
+      "data blocked. Your numbers still work for this session, but they reset when the app closes.";
+}
+
+/* ---- boot -------------------------------------------------------
+   Order matters. The defaults are snapshotted off the shipped tables
+   and the markup's value="" attributes BEFORE any saved layer lands on
+   top of them - otherwise "reset to defaults" would restore whatever
+   was last saved, which is the opposite of the point. */
+captureDefaults();
+applyCalib();
 
 buildSurf(); buildCompass(); buildLandChips(); buildGsChips(); buildShotChips();
 buildBag(); buildShotRows(); buildLandRows();
+
+RATE_IDS.forEach(function(id){ $(id).addEventListener("input",saveCalib); });
+paintLearned(); renderLog(); renderSuggestions();
+if(suggestions().length) $("dSugg").open=true;
+probeStore();
 </script>
 </body>
 </html>

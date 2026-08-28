@@ -28,20 +28,16 @@ These are Mr. Daley's, and they are the point of the project:
 
 ---
 
-## KNOWN BUG — live, reproducible, unfixed
+## Fixed in v10 — the `autoShot` crash
 
-`autoShot()` returns `g("knock")` for **wind ≥ 12 mph at 100+ yards**. No shot has the
-key `knock` — it is `lknock` (Long knockdown). `g()` returns `undefined`, and `compute()`
-then throws on `shot.windMult`.
+`autoShot()` used to return `g("knock")` for wind ≥ 12 mph at 100+ yards. No shot has
+that key — it is `lknock` — so `g()` returned `undefined` and `compute()` threw on
+`shot.windMult`, taking down any windy hole over 100 yards on Auto.
 
-```
-S.shot='auto'; S.dist=150; S.wind=14; S.from='turf';
-compute()  →  TypeError: Cannot read properties of undefined (reading 'windMult')
-```
-
-Reachable any windy hole over 100 yards on Auto. Left unfixed **deliberately**: the
-one-word change to `lknock` is obvious, but *which* shot the auto-picker should choose
-in that situation is a domain call. Ask Mr. Daley, then fix.
+Mr. Daley chose **Long knockdown** (`lknock`): wind multiplier 0.60, irons, off turf and
+rough. That was his call to make, which is why it sat open rather than being patched on
+sight. Verified in-browser: `S.dist=150; S.wind=14; S.from='turf'` now returns
+`lknock / Long knockdown` and computes without throwing.
 
 ---
 
@@ -115,7 +111,7 @@ Do not flatten `GUESS` into the calm palette. Its loudness is the point.
 
 ## Architecture
 
-Single file, no framework, no persistence.
+Single file, no framework, no build step.
 
 **Tables:** `BAG`, `SHOTS`, `WINDOWS`, `INTERP`, `SURFACES`, `LANDING`, `WINDS`, `GREENSPEED`.
 **State:** `S` — the shot (distance, wind, lie, surface, shot type…).
@@ -126,16 +122,128 @@ filters `BAG` to usable clubs, then `solve()` binary-searches the dial that stop
 target, using `fly()` to model carry → roll → stop across the lie range. Output is painted
 into `.screen`.
 
-**Calibration:** four separate `<details>` drawers (bag, shot types, landing surface,
-wind/elevation rates) that edit the live tables in place.
+**Calibration:** six `<details>` drawers on the entry view — bag, shot types, landing
+surface, wind/elevation rates, plus the shot log and suggestions added in v10. The first
+four edit the live tables in place.
 
-**No `localStorage`.** State and calibration reset on reload.
+**Shot conditions still reset on reload.** Only calibration and the log persist; the
+distance, wind and lie you type for a given shot are deliberately not remembered.
 
 > ⚠️ If you were handed a `build/` folder with its own README, **it describes a rewrite
 > that is not what ships here.** That build has one sticky screen, steppers on every
-> number, a single tabbed calibration drawer, `localStorage` persistence under
-> `playslike.v2`, and the `autoShot` fix. **None of that is in this repo.** Only its
-> design system was adopted. Trust this README and the code, not that one.
+> number, and a single tabbed calibration drawer. **None of that is in this repo** — the
+> shipped app has two views (`vEntry` / `vResult`) and separate drawers. Only its design
+> system was adopted. It also claims `localStorage` under `playslike.v2`; the real keys
+> are listed under "Persistence" below and are not the same thing. Trust this README and
+> the code, not that one.
+
+---
+
+## Persistence (v10)
+
+Three `localStorage` keys, per device:
+
+| Key | Holds |
+| --- | --- |
+| `playslike.calib.v1` | bag rows, shot-type rows, landing multipliers, the eight wind/elevation rates, and the `learned` registry |
+| `playslike.log.v1` | the shot log, an array of entries |
+| `playslike.sugg.v1` | dismissed suggestions, keyed by suggestion id |
+
+**The baked-in tables stay the defaults.** `captureDefaults()` snapshots them — and the
+rate fields' `defaultValue`, i.e. the `value=""` in the markup — *before* `applyCalib()`
+lays any saved values over them. Order matters at boot: snapshot, then apply, then build.
+Get it backwards and "reset to defaults" restores whatever was last saved.
+
+Saved values are keyed **by club name and shot key, never by array index**, so reordering
+`BAG` or `SHOTS` cannot shift a saved number onto the wrong club.
+
+**`WINDOWS` and `INTERP` are deliberately not persisted.** They are reference data —
+measured off the game screen, or interpolated and flagged — not preferences. A saved copy
+would also silently outrank a corrected table shipped in a later version.
+
+**Reset** is a two-tap button (no `confirm()`, which would block the page on a phone). It
+restores every drawer value, clears the `learned` registry and its tags, and deletes the
+calibration key. **It does not touch the shot log** — that is data, not a setting.
+
+Every read and write is wrapped in `try`/`catch`: private windows and blocked site data
+throw on access rather than returning empty. If storage is unavailable the app runs on
+shipped defaults and says so in a note under the drawers.
+
+---
+
+## Shot log (v10)
+
+"Log this shot" sits under the result plate. Off by default — it is pressed only when the
+shot was worth counting: the ball went where it was aimed, and whatever error is left
+belongs to the model rather than to a slope or a green running away. **That judgment is
+the filter.** There is deliberately no slope tagging and no auto-detection.
+
+Two numbers are entered, **where it landed** and **where it stopped**, because they
+separate the two error types the learning pass keeps apart:
+
+- **carry error** (landed short or long) → points at the wind or elevation rates
+- **roll error** (landed right, finished wrong) → points at the club's green-roll factor
+
+Everything else is captured automatically from the prescribed shot: club, shot type,
+target, dial, power, elevation, wind speed and direction, lie range, landing surface,
+green speed, and the predicted lands/rolls/stops with their lie ranges. Thirty fields per
+entry.
+
+**Nothing lateral is recorded.** People judge distance far better than direction, so a
+left/right figure would be the least reliable number in the file. The predicted aim *is*
+stored as context and is never read by the learning pass.
+
+`fly()` records which rate actually fired on the shot (`rateId`, `windYd`, `elevYd`, `gr`)
+and `compute()` stashes the lot in `LAST`. The log reads those off the result rather than
+re-deriving them — re-deriving is how a learning pass ends up correcting a rate that never
+ran on that shot.
+
+**Export** writes a JSON file (`playslike-log-YYYY-MM-DD.json`) so a season is not one
+settings reset from gone. Individual entries can be deleted from the drawer, which is the
+only way to undo a mistyped yardage.
+
+---
+
+## Learning (v10) — proposes, never applies
+
+Nothing in this pass writes a calibration value. A number changes only when a person
+presses **Accept**, and it stays tagged `LEARNED` afterwards so it never reads as
+measured. An auto-tuning model that quietly rewrites its own constants is the same failure
+as an estimate presented as measured data, one step further removed.
+
+**Threshold: 5 clean shots** (`SUGG_MIN`), Mr. Daley's call. Corrections under 8%
+(`SUGG_MIN_CHANGE`) are treated as noise and stay quiet.
+
+Four families, kept strictly separate:
+
+| Family | Reads | Proposes |
+| --- | --- | --- |
+| Green roll | shots by that club onto green or fringe | that club's `gr` |
+| Headwind / tailwind | shots where that rate fired **and the ground was flat** | `cHeadFull`, `cHeadApp`, `cTail` |
+| Elevation | shots with elevation **and no wind** | `cElev` |
+| Baseline | shots with neither wind nor elevation | *nothing — note only* |
+
+**The clean-bucket rule is the important one.** A shot with both wind and elevation cannot
+say which of the two was wrong, so it teaches neither. Splitting the blame between them
+would be invented precision.
+
+**The baseline family has no Accept button by design.** If carry is systematically off
+with nothing to blame, the bag numbers are the suspect — and those come off the game's
+bag screen. The model does not get to overwrite measured data on its own say-so.
+
+**Accepting settles it.** Each row must be logged *after* the last acceptance for that key
+(`since()`). Without that watermark the same five shots keep re-proving the same
+correction and the factor compounds on every Accept — 0.52 → 0.77 → 1.14 and on, off no
+new evidence at all. Dismissing works the same way: gone until the sample has grown by
+another full `SUGG_MIN`.
+
+Rows are scored against the rate that actually fired on them, not against today's value,
+so changing a rate midway through a season does not corrupt the earlier shots.
+
+**One known limitation.** Roll suggestions are noisiest where roll is smallest — a ±1 yd
+reading error on a 2.5 yd predicted roll is a 40% swing. Aggregating five shots by summed
+totals (not mean-of-ratios) cancels most of it, since real entry errors scatter both ways,
+but treat a green-roll proposal off short irons with more suspicion than one off a wood.
 
 ---
 
@@ -175,5 +283,6 @@ rounding — do not bake rounded corners back into the PNGs.
   through to the ratio estimate and is flagged. Adding a `WINDOWS["Driver"]` entry with a
   missing shot key would *exclude* Driver from that shot instead — see the usable-club
   filter in `compute()`.
-- **Green-roll factors** beyond 5 Iron and 3 Wood.
+- **Green-roll factors** beyond 5 Iron and 3 Wood — though the shot log will now propose
+  these from real shots once five clean ones exist for a club.
 - Every `GUESS` row in the Shots and Surface drawers.
