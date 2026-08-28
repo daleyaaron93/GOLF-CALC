@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Plays Like — 2K25 Yardage Book</title>
+<style>
+  :root{
+    --bezel: #1b1f1c;
+    --bezel-2: #0f1210;
+    --panel: #171b18;
+    --panel-line: #2a322c;
+    --paper: #cfd8ca;
+    --ink: #aeb8a8;
+    --ink-dim: #6d786b;
+    --lcd: #4dffb0;
+    --lcd-dim: #245c42;
+    --amber: #ffb020;
+    --amber-dim: #6b4c14;
+    --red: #ff5d5d;
+    --mono: ui-monospace, "SF Mono", "Roboto Mono", "Courier New", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; background:#0a0c0a;}
+  body{
+    font-family:var(--sans);
+    color:var(--paper);
+    display:flex;
+    justify-content:center;
+    padding:18px 12px 40px;
+    min-height:100vh;
+  }
+  .device{
+    width:100%;
+    max-width:420px;
+    background:linear-gradient(180deg,var(--bezel),var(--bezel-2));
+    border-radius:22px;
+    padding:16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.04) inset,
+      0 -6px 18px rgba(0,0,0,0.5) inset,
+      0 20px 40px rgba(0,0,0,0.55);
+  }
+  .brandrow{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:2px 6px 12px;
+  }
+  .brand{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.16em;
+    color:var(--ink-dim);
+    text-transform:uppercase;
+  }
+  .brand b{color:var(--ink);}
+  .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--lcd);
+    box-shadow:0 0 6px var(--lcd);
+    display:inline-block;
+    margin-right:6px;
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+  /* Screen */
+  .screen{
+    background:radial-gradient(120% 140% at 50% -10%, #10231a 0%, #070a08 70%);
+    border-radius:14px;
+    padding:22px 18px 18px;
+    border:1px solid #05100a;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.6) inset;
+    position:relative;
+    overflow:hidden;
+  }
+  .screen::before{
+    content:"";
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(
+      0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px,
+      transparent 1px, transparent 3px
+    );
+    pointer-events:none;
+  }
+  .label-row{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:10px; letter-spacing:0.14em;
+    color:var(--lcd-dim); text-transform:uppercase; margin-bottom:4px;
+  }
+  .label-row .club-tag{
+    color:var(--lcd);
+    font-weight:600;
+  }
+  .plays-like{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:64px;
+    line-height:1;
+    color:var(--lcd);
+    text-shadow:0 0 18px rgba(77,255,176,0.45);
+    letter-spacing:-1px;
+    margin:6px 0 2px;
+  }
+  .plays-like span{font-size:22px; color:var(--lcd-dim); margin-left:6px;}
+  .sub-readout{
+    display:flex;
+    gap:18px;
+    margin-top:10px;
+    padding-top:12px;
+    border-top:1px dashed #1c2a20;
+  }
+  .sub-item{font-family:var(--mono);}
+  .sub-item .n{font-size:22px; color:var(--paper); font-weight:600;}
+  .sub-item .l{font-size:9px; letter-spacing:0.14em; color:var(--ink-dim); text-transform:uppercase; display:block; margin-top:2px;}
+  .drift{
+    margin-top:10px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--amber);
+    display:none;
+  }
+  .drift.show{display:block;}
+
+  /* Sections */
+  .section{margin-top:16px;}
+  .section-title{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin:0 4px 8px;
+    display:flex;
+    justify-content:space-between;
+  }
+
+  /* Club chips */
+  .chip-scroll{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:2px 4px 6px;
+    scrollbar-width:none;
+  }
+  .chip-scroll::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto;
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--ink);
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:9px 13px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all .12s ease;
+  }
+  .chip:active{transform:scale(0.96);}
+  .chip.active{
+    background:#173226;
+    border-color:var(--lcd-dim);
+    color:var(--lcd);
+    box-shadow:0 0 0 1px var(--lcd-dim) inset;
+  }
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 4px;}
+  .chip.wide{grid-column:span 1;}
+  .chip-grid{display:flex; flex-wrap:wrap; gap:8px; padding:0 4px;}
+
+  /* Numeric stepper */
+  .stepper-row{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:8px 10px;
+    margin:0 4px;
+  }
+  .stepper-row .field-label{
+    font-family:var(--mono); font-size:11px; color:var(--ink-dim);
+    text-transform:uppercase; letter-spacing:.1em;
+    flex:1;
+  }
+  .stepper-btn{
+    width:30px; height:30px;
+    border-radius:8px;
+    border:1px solid var(--panel-line);
+    background:#10140f;
+    color:var(--lcd);
+    font-family:var(--mono);
+    font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    user-select:none;
+  }
+  .stepper-btn:active{background:#0a0d0a;}
+  .stepper-val{
+    font-family:var(--mono);
+    font-size:16px;
+    color:var(--paper);
+    min-width:56px;
+    text-align:center;
+  }
+
+  details{margin-top:16px; padding:0 4px;}
+  summary{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.1em;
+    color:var(--ink-dim); text-transform:uppercase;
+    cursor:pointer; padding:8px 0;
+    list-style:none;
+  }
+  summary::-webkit-details-marker{display:none;}
+  summary::before{content:"▸ "; color:var(--lcd-dim);}
+  details[open] summary::before{content:"▾ ";}
+
+  .calib-row{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:12px; color:var(--ink);
+    padding:7px 2px;
+    border-bottom:1px solid #1a1f1b;
+    gap:10px;
+  }
+  .calib-row input{
+    width:64px;
+    background:#0e120f;
+    border:1px solid var(--panel-line);
+    color:var(--lcd);
+    font-family:var(--mono);
+    font-size:12px;
+    border-radius:6px;
+    padding:5px 6px;
+    text-align:right;
+  }
+  .calib-note{
+    font-family:var(--mono);
+    font-size:10.5px;
+    line-height:1.5;
+    color:var(--ink-dim);
+    padding:8px 2px 2px;
+  }
+  .source-tag{color:var(--amber);}
+
+  .footer{
+    text-align:center;
+    font-family:var(--mono);
+    font-size:9.5px;
+    color:var(--ink-dim);
+    letter-spacing:0.08em;
+    margin-top:18px;
+    padding:0 10px;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="brandrow">
+    <div class="brand"><span class="dot"></span><b>Plays&nbsp;Like</b> / 2K25</div>
+    <div class="brand">v1.0</div>
+  </div>
+
+  <div class="screen">
+    <div class="label-row">
+      <span>Plays Like</span>
+      <span class="club-tag" id="clubTag">Driver</span>
+    </div>
+    <div class="plays-like" id="totalOut">311<span>yd</span></div>
+    <div class="sub-readout">
+      <div class="sub-item"><span class="n" id="carryOut">285</span><span class="l">Carry</span></div>
+      <div class="sub-item"><span class="n" id="rollOut">26</span><span class="l">Roll</span></div>
+      <div class="sub-item"><span class="n" id="deltaOut">+0</span><span class="l">Vs Base</span></div>
+    </div>
+    <div class="drift" id="driftRow">↔ Lateral drift: <span id="driftVal">0 yd</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Club</div>
+    <div class="chip-scroll" id="clubChips"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Lie</div>
+    <div class="chip-grid" id="lieChips"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Elevation change (ft)</div>
+    <div class="stepper-row">
+      <span class="field-label" id="elevLabel">Flat</span>
+      <div class="stepper-btn" id="elevMinus">–</div>
+      <div class="stepper-val" id="elevVal">0</div>
+      <div class="stepper-btn" id="elevPlus">+</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Wind speed (mph)</div>
+    <div class="stepper-row">
+      <span class="field-label" id="windLabel">No wind</span>
+      <div class="stepper-btn" id="windMinus">–</div>
+      <div class="stepper-val" id="windVal">0</div>
+      <div class="stepper-btn" id="windPlus">+</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Wind direction (relative to shot)</div>
+    <div class="chip-grid" id="windChips"></div>
+  </div>
+
+  <details>
+    <summary>Calibration &amp; formula notes</summary>
+    <div class="calib-note">
+      Base carry/roll for every club comes directly from <span class="source-tag">your logged no-wind data</span>.
+      Wind, elevation, and lie effects below are <span class="source-tag">estimates</span> — mostly from community-tested
+      PGA Tour 2K25 numbers, calibrated once against <span class="source-tag">your real test</span> (Driver, 4mph tailwind:
+      285/311 → 288/317). 2K hasn't published an official formula, so treat these as a tunable starting point — adjust
+      any rate below as you log more real shots, and the calculator updates live.
+    </div>
+    <div class="calib-row"><span>Tailwind, yd/mph (total)</span><input type="number" step="0.05" id="cTailTotal" value="1.5"></div>
+    <div class="calib-row"><span>Tailwind, yd/mph (carry)</span><input type="number" step="0.05" id="cTailCarry" value="0.75"></div>
+    <div class="calib-row"><span>Headwind penalty ×</span><input type="number" step="0.05" id="cHeadMult" value="1.3"></div>
+    <div class="calib-row"><span>Crosswind w/ shape, yd/mph</span><input type="number" step="0.05" id="cCrossWith" value="1.0"></div>
+    <div class="calib-row"><span>Crosswind vs shape, yd/mph</span><input type="number" step="0.05" id="cCrossAgainst" value="1.2"></div>
+    <div class="calib-row"><span>Elevation, ft per 1yd</span><input type="number" step="0.1" id="cElevFt" value="3"></div>
+    <div class="calib-row"><span>Light rough %</span><input type="number" step="1" id="cLightRough" value="-5"></div>
+    <div class="calib-row"><span>Heavy rough %</span><input type="number" step="1" id="cHeavyRough" value="-15"></div>
+    <div class="calib-row"><span>Sand %</span><input type="number" step="1" id="cSand" value="-25"></div>
+    <div class="calib-row"><span>Tee box %</span><input type="number" step="1" id="cTee" value="0"></div>
+  </details>
+
+  <div class="footer">
+    ESTILL COUNTY YARDAGE LAB — for PGA Tour 2K25<br>
+    Formulas are community-derived estimates, not official 2K data.
+  </div>
+</div>
+
+<script>
+const CLUBS = [
+  {name:"Driver",    carry:285, total:311},
+  {name:"3 Wood",    carry:253, total:270},
+  {name:"2 Iron",    carry:225, total:241},
+  {name:"3 Iron",    carry:215, total:227},
+  {name:"5 Iron",    carry:192, total:206},
+  {name:"6 Iron",    carry:182, total:190},
+  {name:"7 Iron",    carry:172, total:181},
+  {name:"8 Iron",    carry:160, total:170},
+  {name:"9 Iron",    carry:150, total:155},
+  {name:"PW",        carry:135, total:142},
+  {name:"50° Wedge", carry:120, total:123},
+  {name:"56° Wedge", carry:105, total:105},
+  {name:"60° Wedge", carry:97,  total:98},
+];
+
+const LIES = [
+  {key:"fairway", name:"Fairway", pct:0},
+  {key:"tee",     name:"Tee box", pct:0},
+  {key:"light",   name:"Light rough", pct:-5},
+  {key:"heavy",   name:"Heavy rough", pct:-15},
+  {key:"sand",    name:"Sand", pct:-25},
+];
+
+const WINDS = [
+  {key:"none", name:"None"},
+  {key:"tail", name:"Tailwind"},
+  {key:"head", name:"Headwind"},
+  {key:"cross_with", name:"Cross · w/ shape"},
+  {key:"cross_against", name:"Cross · vs shape"},
+];
+
+let state = {
+  club: 0,
+  lie: "fairway",
+  elev: 0,   // feet, + = uphill, - = downhill
+  wind: 0,   // mph
+  windDir: "none",
+};
+
+function buildChips(container, items, getKey, getLabel, onPick, activeKey){
+  container.innerHTML = "";
+  items.forEach((item)=>{
+    const el = document.createElement("div");
+    el.className = "chip" + (getKey(item)===activeKey ? " active":"");
+    el.textContent = getLabel(item);
+    el.onclick = ()=>{ onPick(item); render(); };
+    container.appendChild(el);
+  });
+}
+
+function calib(){
+  return {
+    tailTotal: parseFloat(document.getElementById("cTailTotal").value)||0,
+    tailCarry: parseFloat(document.getElementById("cTailCarry").value)||0,
+    headMult: parseFloat(document.getElementById("cHeadMult").value)||1,
+    crossWith: parseFloat(document.getElementById("cCrossWith").value)||0,
+    crossAgainst: parseFloat(document.getElementById("cCrossAgainst").value)||0,
+    elevFt: parseFloat(document.getElementById("cElevFt").value)||3,
+    lightRough: parseFloat(document.getElementById("cLightRough").value)||0,
+    heavyRough: parseFloat(document.getElementById("cHeavyRough").value)||0,
+    sand: parseFloat(document.getElementById("cSand").value)||0,
+    tee: parseFloat(document.getElementById("cTee").value)||0,
+  };
+}
+
+function lieDelta(c, key){
+  if(key==="light") return c.lightRough;
+  if(key==="heavy") return c.heavyRough;
+  if(key==="sand") return c.sand;
+  if(key==="tee") return c.tee;
+  return 0;
+}
+
+function render(){
+  const c = calib();
+  const club = CLUBS[state.club];
+  document.getElementById("clubTag").textContent = club.name;
+
+  // 1. Lie %
+  const liePct = lieDelta(c, state.lie);
+  let carry = club.carry * (1 + liePct/100);
+  let total = club.total * (1 + liePct/100);
+
+  // 2. Elevation: feet per 1 yard; uphill (+ft) reduces distance, downhill (-ft) adds
+  const elevYds = -(state.elev / c.elevFt);
+  carry += elevYds;
+  total += elevYds;
+
+  // 3. Wind
+  let lateral = 0;
+  if(state.windDir==="tail"){
+    carry += c.tailCarry * state.wind;
+    total += c.tailTotal * state.wind;
+  } else if(state.windDir==="head"){
+    carry -= c.tailCarry * c.headMult * state.wind;
+    total -= c.tailTotal * c.headMult * state.wind;
+  } else if(state.windDir==="cross_with"){
+    lateral = c.crossWith * state.wind;
+  } else if(state.windDir==="cross_against"){
+    lateral = c.crossAgainst * state.wind;
+  }
+
+  carry = Math.max(0, Math.round(carry));
+  total = Math.max(0, Math.round(total));
+  const roll = Math.max(0, total - carry);
+  const delta = total - club.total;
+
+  document.getElementById("carryOut").textContent = carry;
+  document.getElementById("rollOut").textContent = roll;
+  document.getElementById("totalOut").innerHTML = total + "<span>yd</span>";
+  document.getElementById("deltaOut").textContent = (delta>=0?"+":"") + delta;
+
+  const driftRow = document.getElementById("driftRow");
+  if(lateral !== 0){
+    driftRow.classList.add("show");
+    document.getElementById("driftVal").textContent = Math.round(lateral) + " yd";
+  } else {
+    driftRow.classList.remove("show");
+  }
+
+  // labels
+  document.getElementById("elevVal").textContent = (state.elev>0?"+":"") + state.elev;
+  document.getElementById("elevLabel").textContent = state.elev===0 ? "Flat" : (state.elev>0 ? "Uphill" : "Downhill");
+  document.getElementById("windVal").textContent = state.wind;
+  document.getElementById("windLabel").textContent = state.wind===0 ? "No wind" : WINDS.find(w=>w.key===state.windDir).name;
+
+  buildChips(document.getElementById("clubChips"), CLUBS, c=>CLUBS.indexOf(c), c=>c.name,
+    (item)=>{ state.club = CLUBS.indexOf(item); }, CLUBS.indexOf(club));
+  buildChips(document.getElementById("lieChips"), LIES, l=>l.key, l=>l.name,
+    (item)=>{ state.lie = item.key; }, state.lie);
+  buildChips(document.getElementById("windChips"), WINDS, w=>w.key, w=>w.name,
+    (item)=>{ state.windDir = item.key; }, state.windDir);
+}
+
+document.getElementById("elevMinus").onclick = ()=>{ state.elev -= 1; render(); };
+document.getElementById("elevPlus").onclick  = ()=>{ state.elev += 1; render(); };
+document.getElementById("windMinus").onclick = ()=>{ state.wind = Math.max(0, state.wind-1); render(); };
+document.getElementById("windPlus").onclick  = ()=>{ state.wind += 1; render(); };
+
+document.querySelectorAll('details input').forEach(inp=>{
+  inp.addEventListener('input', render);
+  inp.addEventListener('click', e=>e.stopPropagation());
+});
+
+render();
+</script>
+</body>
+</html>
