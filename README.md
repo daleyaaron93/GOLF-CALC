@@ -122,6 +122,32 @@ filters `BAG` to usable clubs, then `solve()` binary-searches the dial that stop
 target, using `fly()` to model carry → roll → stop across the lie range. Output is painted
 into `.screen`.
 
+## What a user can edit, and what they can't
+
+Every drawer is user-editable and persists (see "Persistence"). Each multi-column drawer
+carries a `.row.hdr` header row built by its `build*()` function, with header cells fixed at
+the same 64px as the inputs so the two line up; `.lbl` flexes and absorbs the MEAS/GUESS tag,
+whose width differs between the two. Each drawer also carries a `.gloss` block defining every
+column in plain language. **Keep both in step with the fields** — unlabelled numeric columns
+are what this section exists to prevent.
+
+| Surface | Editable | Where |
+| --- | --- | --- |
+| Club distances — min carry, max carry, max total, green roll | yes | My bag |
+| Shot behaviour — reach, wind, fixed roll | yes | Shot types |
+| Landing surfaces — roll vs fairway | yes | Landing surface |
+| The eight wind/elevation rates | yes | Wind & elevation |
+| `WINDOWS` — the ~80 per-club dial windows | **no** | not exposed |
+| `INTERP`, `SURFACES`, `WINDS`, `GREENSPEED` | **no** | reference data, by design |
+| The club lineup itself (13 clubs, fixed) | **no** | no add/remove UI |
+
+**`WINDOWS` is the notable gap.** It holds the measured dial window (max and min) for each
+club/shot pair — 12 clubs, ~80 pairs — and it is the most "measured off your screen" data in
+the app, but there is no UI for it. Correcting one means editing the table in `index.html`.
+If that ever gets a UI it needs a shape that works on a phone; a flat 80-row list will not.
+
+---
+
 **Lie presets.** `buildSurf()` lights the preset whose `lo`/`hi` match the numbers in the
 fields *and* whose `from` matches `S.from`. It previously matched on `from` alone, which lit
 every preset sharing the bucket — Fairway and Fringe are both `turf`, and Lt rough, Hvy
