@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
 <title>Plays Like</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -14,487 +14,740 @@
 <link rel="manifest" href="manifest.json">
 <style>
   :root{
-    --bezel: #1b1f1c;
-    --bezel-2: #0f1210;
-    --panel: #171b18;
-    --panel-line: #2a322c;
-    --paper: #cfd8ca;
-    --ink: #aeb8a8;
-    --ink-dim: #6d786b;
-    --lcd: #4dffb0;
-    --lcd-dim: #245c42;
-    --amber: #ffb020;
-    --amber-dim: #6b4c14;
-    --red: #ff5d5d;
-    --mono: ui-monospace, "SF Mono", "Roboto Mono", "Courier New", monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    --bezel:#1b1f1c; --bezel-2:#0f1210;
+    --panel:#171b18; --panel-line:#2a322c;
+    --paper:#cfd8ca; --ink:#aeb8a8; --ink-dim:#6d786b;
+    --lcd:#4dffb0; --lcd-dim:#245c42;
+    --amber:#ffb020; --red:#ff6b6b;
+    --mono:ui-monospace,"SF Mono","Roboto Mono","Courier New",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-  html,body{margin:0; padding:0; background:#0a0c0a;}
-  body{
-    font-family:var(--sans);
-    color:var(--paper);
-    display:flex;
-    justify-content:center;
-    padding:18px 12px 40px;
-    min-height:100vh;
-  }
-  .device{
-    width:100%;
-    max-width:420px;
-    background:linear-gradient(180deg,var(--bezel),var(--bezel-2));
-    border-radius:22px;
-    padding:16px;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.04) inset,
-      0 -6px 18px rgba(0,0,0,0.5) inset,
-      0 20px 40px rgba(0,0,0,0.55);
-  }
-  .brandrow{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    padding:2px 6px 12px;
-  }
-  .brand{
-    font-family:var(--mono);
-    font-size:11px;
-    letter-spacing:0.16em;
-    color:var(--ink-dim);
-    text-transform:uppercase;
-  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:#0a0c0a;}
+  body{font-family:var(--sans);color:var(--paper);display:flex;justify-content:center;
+       padding:14px 12px 40px;min-height:100vh;}
+  .device{width:100%;max-width:430px;background:linear-gradient(180deg,var(--bezel),var(--bezel-2));
+    border-radius:22px;padding:15px;
+    box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 -6px 18px rgba(0,0,0,.5) inset,0 20px 40px rgba(0,0,0,.55);}
+  .brandrow{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px 12px;}
+  .brand{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--ink-dim);text-transform:uppercase;}
   .brand b{color:var(--ink);}
-  .dot{
-    width:6px;height:6px;border-radius:50%;
-    background:var(--lcd);
-    box-shadow:0 0 6px var(--lcd);
-    display:inline-block;
-    margin-right:6px;
-    animation:pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--lcd);box-shadow:0 0 6px var(--lcd);
+       display:inline-block;margin-right:6px;animation:pulse 2.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .view{display:none;} .view.on{display:block;animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  /* Screen */
-  .screen{
-    background:radial-gradient(120% 140% at 50% -10%, #10231a 0%, #070a08 70%);
-    border-radius:14px;
-    padding:22px 18px 18px;
-    border:1px solid #05100a;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.6) inset;
-    position:relative;
-    overflow:hidden;
-  }
-  .screen::before{
-    content:"";
-    position:absolute; inset:0;
-    background:repeating-linear-gradient(
-      0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px,
-      transparent 1px, transparent 3px
-    );
-    pointer-events:none;
-  }
-  .label-row{
-    display:flex; justify-content:space-between; align-items:center;
-    font-family:var(--mono); font-size:10px; letter-spacing:0.14em;
-    color:var(--lcd-dim); text-transform:uppercase; margin-bottom:4px;
-  }
-  .label-row .club-tag{
-    color:var(--lcd);
-    font-weight:600;
-  }
-  .plays-like{
-    font-family:var(--mono);
-    font-weight:700;
-    font-size:64px;
-    line-height:1;
-    color:var(--lcd);
-    text-shadow:0 0 18px rgba(77,255,176,0.45);
-    letter-spacing:-1px;
-    margin:6px 0 2px;
-  }
-  .plays-like span{font-size:22px; color:var(--lcd-dim); margin-left:6px;}
-  .sub-readout{
-    display:flex;
-    gap:18px;
-    margin-top:10px;
-    padding-top:12px;
-    border-top:1px dashed #1c2a20;
-  }
-  .sub-item{font-family:var(--mono);}
-  .sub-item .n{font-size:22px; color:var(--paper); font-weight:600;}
-  .sub-item .l{font-size:9px; letter-spacing:0.14em; color:var(--ink-dim); text-transform:uppercase; display:block; margin-top:2px;}
-  .drift{
-    margin-top:10px;
-    font-family:var(--mono);
-    font-size:12px;
-    color:var(--amber);
-    display:none;
-  }
-  .drift.show{display:block;}
+  .field{margin-bottom:11px;}
+  .flabel{font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--ink-dim);
+    text-transform:uppercase;margin:0 3px 6px;display:flex;justify-content:space-between;align-items:baseline;}
+  .flabel .hint{color:#4a5449;letter-spacing:.03em;text-transform:none;font-size:9.5px;}
+  .inp{width:100%;background:var(--panel);border:1px solid var(--panel-line);border-radius:11px;
+    color:var(--lcd);font-family:var(--mono);font-size:24px;font-weight:700;text-align:center;
+    padding:12px 8px;-moz-appearance:textfield;}
+  .inp::-webkit-outer-spin-button,.inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .inp:focus{outline:none;border-color:var(--lcd-dim);box-shadow:0 0 0 1px var(--lcd-dim) inset;}
+  .inp::placeholder{color:#2f3a33;}
+  .inp.hero{font-size:40px;padding:14px 8px;}
+  .pair{display:flex;gap:9px;}
+  .pair .field{flex:1;margin-bottom:11px;}
+  .lie-row{display:flex;align-items:center;gap:7px;}
+  .lie-row .inp{flex:1;font-size:21px;}
+  .dash{font-family:var(--mono);color:var(--ink-dim);font-size:16px;}
 
-  /* Sections */
-  .section{margin-top:16px;}
-  .section-title{
-    font-family:var(--mono);
-    font-size:10px;
-    letter-spacing:0.16em;
-    text-transform:uppercase;
-    color:var(--ink-dim);
-    margin:0 4px 8px;
-    display:flex;
-    justify-content:space-between;
-  }
+  .elev-wrap{display:flex;gap:8px;}
+  .elev-wrap .inp{flex:1;}
+  .updown{display:flex;flex-direction:column;gap:4px;}
+  .ud{width:44px;flex:1;border-radius:9px;border:1px solid var(--panel-line);background:var(--panel);
+    color:var(--ink-dim);font-family:var(--mono);font-size:11px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;}
+  .ud.active{background:#173226;border-color:var(--lcd-dim);color:var(--lcd);}
 
-  /* Club chips */
-  .chip-scroll{
-    display:flex;
-    gap:8px;
-    overflow-x:auto;
-    padding:2px 4px 6px;
-    scrollbar-width:none;
-  }
-  .chip-scroll::-webkit-scrollbar{display:none;}
-  .chip{
-    flex:0 0 auto;
-    font-family:var(--mono);
-    font-size:13px;
-    color:var(--ink);
-    background:var(--panel);
-    border:1px solid var(--panel-line);
-    border-radius:10px;
-    padding:9px 13px;
-    cursor:pointer;
-    white-space:nowrap;
-    transition:all .12s ease;
-  }
-  .chip:active{transform:scale(0.96);}
-  .chip.active{
-    background:#173226;
-    border-color:var(--lcd-dim);
-    color:var(--lcd);
-    box-shadow:0 0 0 1px var(--lcd-dim) inset;
-  }
+  .surf{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .surf div{font-family:var(--mono);font-size:11px;color:var(--ink-dim);background:#131714;
+    border:1px solid var(--panel-line);border-radius:8px;padding:6px 9px;cursor:pointer;}
+  .surf div:active{background:#10140f;}
 
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 4px;}
-  .chip.wide{grid-column:span 1;}
-  .chip-grid{display:flex; flex-wrap:wrap; gap:8px; padding:0 4px;}
+  .compass{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .cbtn{aspect-ratio:1.55;border:1px solid var(--panel-line);background:var(--panel);border-radius:10px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+    font-family:var(--mono);color:var(--ink-dim);gap:1px;}
+  .cbtn .ar{font-size:16px;line-height:1;}
+  .cbtn .tx{font-size:7.5px;letter-spacing:.05em;}
+  .cbtn.active{background:#173226;border-color:var(--lcd-dim);color:var(--lcd);
+    box-shadow:0 0 0 1px var(--lcd-dim) inset;}
 
-  /* Numeric stepper */
-  .stepper-row{
-    display:flex; align-items:center; gap:10px;
-    background:var(--panel);
-    border:1px solid var(--panel-line);
-    border-radius:10px;
-    padding:8px 10px;
-    margin:0 4px;
-  }
-  .stepper-row .field-label{
-    font-family:var(--mono); font-size:11px; color:var(--ink-dim);
-    text-transform:uppercase; letter-spacing:.1em;
-    flex:1;
-  }
-  .stepper-btn{
-    width:30px; height:30px;
-    border-radius:8px;
-    border:1px solid var(--panel-line);
-    background:#10140f;
-    color:var(--lcd);
-    font-family:var(--mono);
-    font-size:16px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-    user-select:none;
-  }
-  .stepper-btn:active{background:#0a0d0a;}
-  .stepper-val{
-    font-family:var(--mono);
-    font-size:16px;
-    color:var(--paper);
-    min-width:56px;
-    text-align:center;
-  }
+  .chip-grid{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--panel);
+    border:1px solid var(--panel-line);border-radius:9px;padding:8px 10px;cursor:pointer;white-space:nowrap;}
+  .chip:active{transform:scale(.96);}
+  .chip.active{background:#173226;border-color:var(--lcd-dim);color:var(--lcd);
+    box-shadow:0 0 0 1px var(--lcd-dim) inset;}
 
-  details{margin-top:16px; padding:0 4px;}
-  summary{
-    font-family:var(--mono); font-size:11px; letter-spacing:0.1em;
-    color:var(--ink-dim); text-transform:uppercase;
-    cursor:pointer; padding:8px 0;
-    list-style:none;
-  }
+  .go{width:100%;margin-top:16px;padding:16px;border-radius:13px;border:1px solid var(--lcd-dim);
+    background:#12291e;color:var(--lcd);font-family:var(--mono);font-size:15px;font-weight:700;
+    letter-spacing:.16em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 22px rgba(77,255,176,.13);}
+  .go:active{background:#0e2018;}
+  .reset{width:100%;margin-top:8px;padding:10px;border-radius:10px;border:1px solid var(--panel-line);
+    background:transparent;color:var(--ink-dim);font-family:var(--mono);font-size:11px;
+    letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
+
+  .screen{background:radial-gradient(120% 140% at 50% -10%,#10231a 0%,#070a08 70%);
+    border-radius:14px;padding:18px 16px 16px;border:1px solid #05100a;
+    box-shadow:0 2px 10px rgba(0,0,0,.6) inset;position:relative;overflow:hidden;}
+  .screen::before{content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0,rgba(255,255,255,.015) 1px,transparent 1px,transparent 3px);
+    pointer-events:none;}
+  .rd-top{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;
+    letter-spacing:.14em;color:var(--lcd-dim);text-transform:uppercase;}
+  .club-name{font-family:var(--mono);font-weight:700;font-size:40px;line-height:1.05;color:var(--lcd);
+    text-shadow:0 0 18px rgba(77,255,176,.4);margin:6px 0 8px;letter-spacing:-1px;}
+  .dial-line{font-family:var(--mono);font-size:14px;color:var(--paper);}
+  .dial-line b{color:var(--lcd);font-size:29px;font-weight:700;text-shadow:0 0 14px rgba(77,255,176,.35);}
+  .power-line{font-family:var(--mono);font-size:12.5px;color:var(--ink);margin-top:3px;}
+  .power-bar{height:5px;background:#0d1a13;border-radius:3px;margin-top:8px;overflow:hidden;}
+  .power-fill{height:100%;background:var(--lcd);box-shadow:0 0 8px var(--lcd);width:0%;transition:width .25s;}
+  .prescribe{display:flex;gap:8px;margin-top:13px;}
+  .px{flex:1;background:#0c1712;border:1px solid #18291f;border-radius:9px;padding:8px 6px;text-align:center;}
+  .px .n{font-family:var(--mono);font-size:13px;color:var(--lcd);font-weight:700;}
+  .px .l{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--ink-dim);
+    text-transform:uppercase;display:block;margin-top:3px;}
+  .flight{display:flex;margin-top:13px;padding-top:12px;border-top:1px dashed #1c2a20;}
+  .fl{flex:1;text-align:center;position:relative;}
+  .fl:not(:last-child)::after{content:"";position:absolute;right:0;top:12%;height:76%;width:1px;background:#18251d;}
+  .fl .n{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--paper);}
+  .fl.stop .n{color:var(--lcd);}
+  .fl .l{font-family:var(--mono);font-size:8px;letter-spacing:.11em;color:var(--ink-dim);
+    text-transform:uppercase;display:block;margin-top:3px;}
+  .aim{margin-top:12px;font-family:var(--mono);font-size:13px;color:var(--amber);display:none;}
+  .aim.show{display:block;}
+  .warn{margin-top:9px;font-family:var(--mono);font-size:11.5px;color:var(--red);display:none;line-height:1.5;}
+  .warn.show{display:block;}
+  .alts{margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);line-height:1.6;}
+  .recap{margin-top:12px;font-family:var(--mono);font-size:10px;color:#4a5449;line-height:1.6;letter-spacing:.03em;}
+  .back{width:100%;margin-top:14px;padding:14px;border-radius:12px;border:1px solid var(--panel-line);
+    background:var(--panel);color:var(--ink);font-family:var(--mono);font-size:13px;
+    letter-spacing:.14em;text-transform:uppercase;cursor:pointer;}
+  .back:active{background:#10140f;}
+
+  details{margin-top:14px;}
+  summary{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink-dim);
+    text-transform:uppercase;cursor:pointer;padding:8px 2px;list-style:none;}
   summary::-webkit-details-marker{display:none;}
-  summary::before{content:"▸ "; color:var(--lcd-dim);}
-  details[open] summary::before{content:"▾ ";}
-
-  .calib-row{
-    display:flex; justify-content:space-between; align-items:center;
-    font-family:var(--mono); font-size:12px; color:var(--ink);
-    padding:7px 2px;
-    border-bottom:1px solid #1a1f1b;
-    gap:10px;
-  }
-  .calib-row input{
-    width:64px;
-    background:#0e120f;
-    border:1px solid var(--panel-line);
-    color:var(--lcd);
-    font-family:var(--mono);
-    font-size:12px;
-    border-radius:6px;
-    padding:5px 6px;
-    text-align:right;
-  }
-  .calib-note{
-    font-family:var(--mono);
-    font-size:10.5px;
-    line-height:1.5;
-    color:var(--ink-dim);
-    padding:8px 2px 2px;
-  }
-  .source-tag{color:var(--amber);}
-
-  .footer{
-    text-align:center;
-    font-family:var(--mono);
-    font-size:9.5px;
-    color:var(--ink-dim);
-    letter-spacing:0.08em;
-    margin-top:18px;
-    padding:0 10px;
-    line-height:1.6;
-  }
+  summary::before{content:"\25B8 ";color:var(--lcd-dim);}
+  details[open] summary::before{content:"\25BE ";}
+  .row{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);
+    font-size:11.5px;color:var(--ink);padding:6px 2px;border-bottom:1px solid #1a1f1b;gap:7px;}
+  .row input{width:58px;background:#0e120f;border:1px solid var(--panel-line);color:var(--lcd);
+    font-family:var(--mono);font-size:11.5px;border-radius:6px;padding:5px 5px;text-align:right;}
+  .row .lbl{flex:1;}
+  .tag{font-size:8.5px;padding:2px 4px;border-radius:4px;letter-spacing:.05em;}
+  .tag.ok{background:#12261c;color:var(--lcd-dim);border:1px solid #1d3d2c;}
+  .tag.guess{background:#2a1f0a;color:#8a6a20;border:1px solid #443318;}
+  .note{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--ink-dim);padding:6px 2px 4px;}
+  .src{color:var(--amber);}
+  .footer{text-align:center;font-family:var(--mono);font-size:9px;color:#3f4740;
+    letter-spacing:.08em;margin-top:16px;line-height:1.6;}
 </style>
 </head>
 <body>
-
 <div class="device">
+
   <div class="brandrow">
     <div class="brand"><span class="dot"></span><b>Plays&nbsp;Like</b> / 2K25</div>
-    <div class="brand">v1.0</div>
+    <div class="brand" id="verTag">Setup</div>
   </div>
 
-  <div class="screen">
-    <div class="label-row">
-      <span>Plays Like</span>
-      <span class="club-tag" id="clubTag">Driver</span>
+  <div class="view on" id="vEntry">
+    <div class="field">
+      <div class="flabel"><span>Distance to pin</span><span class="hint">where it should stop</span></div>
+      <input class="inp hero" id="fDist" type="number" inputmode="numeric" placeholder="150">
     </div>
-    <div class="plays-like" id="totalOut">311<span>yd</span></div>
-    <div class="sub-readout">
-      <div class="sub-item"><span class="n" id="carryOut">285</span><span class="l">Carry</span></div>
-      <div class="sub-item"><span class="n" id="rollOut">26</span><span class="l">Roll</span></div>
-      <div class="sub-item"><span class="n" id="deltaOut">+0</span><span class="l">Vs Base</span></div>
+
+    <div class="pair">
+      <div class="field">
+        <div class="flabel"><span>Elevation ft</span></div>
+        <div class="elev-wrap">
+          <input class="inp" id="fElev" type="number" inputmode="numeric" placeholder="0">
+          <div class="updown">
+            <div class="ud active" id="udUp">UP</div>
+            <div class="ud" id="udDown">DOWN</div>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="flabel"><span>Must carry</span></div>
+        <input class="inp" id="fHaz" type="number" inputmode="numeric" placeholder="0">
+      </div>
     </div>
-    <div class="drift" id="driftRow">↔ Lateral drift: <span id="driftVal">0 yd</span></div>
-  </div>
 
-  <div class="section">
-    <div class="section-title">Club</div>
-    <div class="chip-scroll" id="clubChips"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Lie</div>
-    <div class="chip-grid" id="lieChips"></div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Elevation change (ft)</div>
-    <div class="stepper-row">
-      <span class="field-label" id="elevLabel">Flat</span>
-      <div class="stepper-btn" id="elevMinus">–</div>
-      <div class="stepper-val" id="elevVal">0</div>
-      <div class="stepper-btn" id="elevPlus">+</div>
+    <div class="field">
+      <div class="flabel"><span>Lie %</span><span class="hint">the range under the ball icon</span></div>
+      <div class="surf" id="surfPresets"></div>
+      <div class="lie-row">
+        <input class="inp" id="fLieLo" type="number" inputmode="numeric" placeholder="98">
+        <span class="dash">to</span>
+        <input class="inp" id="fLieHi" type="number" inputmode="numeric" placeholder="99">
+      </div>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="section-title">Wind speed (mph)</div>
-    <div class="stepper-row">
-      <span class="field-label" id="windLabel">No wind</span>
-      <div class="stepper-btn" id="windMinus">–</div>
-      <div class="stepper-val" id="windVal">0</div>
-      <div class="stepper-btn" id="windPlus">+</div>
+    <div class="field">
+      <div class="flabel"><span>Lands on</span><span class="hint">what it first hits</span></div>
+      <div class="chip-grid" id="landChips"></div>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="section-title">Wind direction (relative to shot)</div>
-    <div class="chip-grid" id="windChips"></div>
-  </div>
-
-  <details>
-    <summary>Calibration &amp; formula notes</summary>
-    <div class="calib-note">
-      Base carry/roll for every club comes directly from <span class="source-tag">your logged no-wind data</span>.
-      Wind, elevation, and lie effects below are <span class="source-tag">estimates</span> — mostly from community-tested
-      PGA Tour 2K25 numbers, calibrated once against <span class="source-tag">your real test</span> (Driver, 4mph tailwind:
-      285/311 → 288/317). 2K hasn't published an official formula, so treat these as a tunable starting point — adjust
-      any rate below as you log more real shots, and the calculator updates live.
+    <div class="field" id="gsField">
+      <div class="flabel"><span>Green speed</span><span class="hint">assume average if unknown</span></div>
+      <div class="chip-grid" id="gsChips"></div>
     </div>
-    <div class="calib-row"><span>Tailwind, yd/mph (total)</span><input type="number" step="0.05" id="cTailTotal" value="1.5"></div>
-    <div class="calib-row"><span>Tailwind, yd/mph (carry)</span><input type="number" step="0.05" id="cTailCarry" value="0.75"></div>
-    <div class="calib-row"><span>Headwind penalty ×</span><input type="number" step="0.05" id="cHeadMult" value="1.3"></div>
-    <div class="calib-row"><span>Crosswind w/ shape, yd/mph</span><input type="number" step="0.05" id="cCrossWith" value="1.0"></div>
-    <div class="calib-row"><span>Crosswind vs shape, yd/mph</span><input type="number" step="0.05" id="cCrossAgainst" value="1.2"></div>
-    <div class="calib-row"><span>Elevation, ft per 1yd</span><input type="number" step="0.1" id="cElevFt" value="3"></div>
-    <div class="calib-row"><span>Light rough %</span><input type="number" step="1" id="cLightRough" value="-5"></div>
-    <div class="calib-row"><span>Heavy rough %</span><input type="number" step="1" id="cHeavyRough" value="-15"></div>
-    <div class="calib-row"><span>Sand %</span><input type="number" step="1" id="cSand" value="-25"></div>
-    <div class="calib-row"><span>Tee box %</span><input type="number" step="1" id="cTee" value="0"></div>
-  </details>
+
+    <div class="field">
+      <div class="flabel"><span>Wind mph</span></div>
+      <input class="inp" id="fWind" type="number" inputmode="numeric" placeholder="0">
+    </div>
+
+    <div class="field">
+      <div class="flabel"><span>Wind direction</span><span class="hint">relative to your shot</span></div>
+      <div class="compass" id="compass"></div>
+    </div>
+
+    <div class="field">
+      <div class="flabel"><span>Shot type</span><span class="hint">auto picks for the distance</span></div>
+      <div class="chip-grid" id="shotChips"></div>
+    </div>
+
+    <button class="go" id="btnGo">Give me the shot</button>
+    <button class="reset" id="btnReset">Clear conditions</button>
+
+    <details>
+      <summary>My bag &mdash; max carry &amp; max total</summary>
+      <div class="note">Shot windows for every club are measured off your screen (Driver pending).
+      Below: min &middot; max &middot; max total &middot; green-roll factor. The first three come off your
+      golf bag screen. Green roll is how much that club releases on a green versus its fairway roll &mdash;
+      1.0 means the same. Only the 5 Iron and 3 Wood are measured.</div>
+      <div id="bagRows"></div>
+    </details>
+
+    <details>
+      <summary>Shot types &mdash; roll &amp; wind sensitivity</summary>
+      <div class="note">Columns: max window (fraction of the club's max) &middot; wind multiplier &middot; fixed roll.
+      <span class="tag ok">MEAS</span> read off your screen.
+      <span class="tag guess">GUESS</span> my estimate &mdash; correct these first.
+      Roll 0 = use the club's own roll ratio.</div>
+      <div id="shotRows"></div>
+    </details>
+
+    <details>
+      <summary>Landing surface &mdash; roll multiplier</summary>
+      <div class="note">How much the surface it lands on holds the ball, against your fairway numbers.
+      All <span class="tag guess">GUESS</span> until tested.</div>
+      <div id="landRows"></div>
+    </details>
+
+    <details>
+      <summary>Wind &amp; elevation rates</summary>
+      <div class="note">From <span class="src">Operation Sports' tested 2K25 guide</span> &mdash; the only
+      published figures. 2K has never released a formula.</div>
+      <div class="row"><span class="lbl">Tailwind yd/mph</span><span class="tag ok">SRC</span><input type="number" step=".05" id="cTail" value="0.8"></div>
+      <div class="row"><span class="lbl">Headwind approach</span><span class="tag ok">SRC</span><input type="number" step=".05" id="cHeadApp" value="1.2"></div>
+      <div class="row"><span class="lbl">Headwind full</span><span class="tag ok">SRC</span><input type="number" step=".05" id="cHeadFull" value="1.5"></div>
+      <div class="row"><span class="lbl">Full-shot threshold</span><span class="tag guess">GUESS</span><input type="number" step="5" id="cFullThresh" value="130"></div>
+      <div class="row"><span class="lbl">Crosswind yd/mph</span><span class="tag ok">SRC</span><input type="number" step=".05" id="cCross" value="1.0"></div>
+      <div class="row"><span class="lbl">&nbsp;&nbsp;at reference distance</span><span class="tag ok">YOURS</span><input type="number" step="5" id="cCrossRef" value="250"></div>
+      <div class="row"><span class="lbl">Quartering factor</span><span class="tag ok">SRC</span><input type="number" step=".05" id="cQuarter" value="0.7"></div>
+      <div class="row"><span class="lbl">Elevation ft per yd</span><span class="tag ok">SRC</span><input type="number" step=".1" id="cElev" value="3"></div>
+    </details>
+  </div>
+
+  <div class="view" id="vResult">
+    <div class="screen">
+      <div class="rd-top"><span>Club</span><span id="modeTag">Approach</span></div>
+      <div class="club-name" id="clubOut">7 Iron</div>
+      <div class="dial-line">Dial to <b id="dialOut">143</b> yd</div>
+      <div class="power-line">Circle reads <span id="powerOut">87%</span></div>
+      <div class="power-bar"><div class="power-fill" id="powerFill"></div></div>
+
+      <div class="prescribe">
+        <div class="px"><span class="n" id="shotRx">Approach</span><span class="l">Shot</span></div>
+        <div class="px"><span class="n" id="shapeRx">Straight</span><span class="l">Shape</span></div>
+      </div>
+
+      <div class="flight">
+        <div class="fl"><span class="n" id="landOut">143</span><span class="l">Lands</span></div>
+        <div class="fl"><span class="n" id="rollOut">7</span><span class="l">Rolls</span></div>
+        <div class="fl stop"><span class="n" id="stopOut">150</span><span class="l">Stops</span></div>
+      </div>
+
+      <div class="aim" id="aimRow"></div>
+      <div class="warn" id="warnRow"></div>
+      <div class="alts" id="altsRow"></div>
+      <div class="recap" id="recapRow"></div>
+    </div>
+    <button class="back" id="btnBack">&#8592; Change conditions</button>
+  </div>
 
   <div class="footer">
-    ESTILL COUNTY YARDAGE LAB — for PGA Tour 2K25<br>
-    Formulas are community-derived estimates, not official 2K data.
+    ESTILL COUNTY YARDAGE LAB &mdash; PGA TOUR 2K25<br>
+    Sourced where marked; the rest is a starting point to test against.
   </div>
 </div>
 
 <script>
-const CLUBS = [
-  {name:"Driver",    carry:285, total:311},
-  {name:"3 Wood",    carry:253, total:270},
-  {name:"2 Iron",    carry:225, total:241},
-  {name:"3 Iron",    carry:215, total:227},
-  {name:"5 Iron",    carry:192, total:206},
-  {name:"6 Iron",    carry:182, total:190},
-  {name:"7 Iron",    carry:172, total:181},
-  {name:"8 Iron",    carry:160, total:170},
-  {name:"9 Iron",    carry:150, total:155},
-  {name:"PW",        carry:135, total:142},
-  {name:"50° Wedge", carry:120, total:123},
-  {name:"56° Wedge", carry:105, total:105},
-  {name:"60° Wedge", carry:97,  total:98},
+/* gr = how much this club rolls on a GREEN vs its own fairway roll.
+   Trajectory-driven: flat-flying woods release, steep short irons check up.
+   5 Iron and 3 Wood measured from live shots; the rest interpolated. */
+var BAG=[
+ {name:"Driver",max:290,min:237,total:311,cls:"wood",driver:true,gr:1.50},
+ {name:"3 Wood",max:254,min:204,total:270,cls:"wood",gr:1.45},
+ {name:"2 Iron",max:224,min:140,total:241,cls:"iron",gr:1.15},
+ {name:"3 Iron",max:213,min:134,total:227,cls:"iron",gr:1.00},
+ {name:"5 Iron",max:192,min:123,total:206,cls:"iron",gr:0.60},
+ {name:"6 Iron",max:182,min:117,total:190,cls:"iron",gr:0.58},
+ {name:"7 Iron",max:172,min:112,total:181,cls:"iron",gr:0.55},
+ {name:"8 Iron",max:160,min:105,total:170,cls:"iron",gr:0.52},
+ {name:"9 Iron",max:150,min:100,total:155,cls:"iron",gr:0.50},
+ {name:"PW",    max:133,min:90, total:142,cls:"iron",gr:0.45},
+ {name:"50\u00B0",max:120,min:82,total:123,cls:"wedge",gr:0.40},
+ {name:"56\u00B0",max:105,min:74,total:105,cls:"wedge",gr:0.35},
+ {name:"60\u00B0",max:97, min:67,total:98, cls:"wedge",gr:0.30}
 ];
 
-const LIES = [
-  {key:"fairway", name:"Fairway", pct:0},
-  {key:"tee",     name:"Tee box", pct:0},
-  {key:"light",   name:"Light rough", pct:-5},
-  {key:"heavy",   name:"Heavy rough", pct:-15},
-  {key:"sand",    name:"Sand", pct:-25},
-];
+/* maxPct / minPct = the shot's dial window as a fraction of that club's MAX.
+   Derived from the 60 wedge (max 97): approach 95, pitch 48, splash 44, thai spinner 13-10.
+   minPct null = fall back to the club's own min. */
 
-const WINDS = [
-  {key:"none", name:"None"},
-  {key:"tail", name:"Tailwind"},
-  {key:"head", name:"Headwind"},
-  {key:"cross_with", name:"Cross · w/ shape"},
-  {key:"cross_against", name:"Cross · vs shape"},
-];
-
-let state = {
-  club: 0,
-  lie: "fairway",
-  elev: 0,   // feet, + = uphill, - = downhill
-  wind: 0,   // mph
-  windDir: "none",
+/* MEASURED windows, read off the game screen: box number = max carry,
+   arrow at the lowest available power = min. Driver not yet collected. */
+var WINDOWS={
+ "PW":{appr:[133,90],chokea:[127,120],pitch:[60,12],spin:[56,29],lflop:[46,28],flop:[33,20],sflop:[18,11],chip:[16,2],thai:[17,13]},
+ "9 Iron":{appr:[149,100],chokea:[142,134],punch:[118,27],chokep:[100,9],runner:[64,14]},
+ "8 Iron":{appr:[159,105],chokea:[151,143],punch:[129,29],chokep:[110,10],runner:[68,15]},
+ "7 Iron":{appr:[170,112],chokea:[162,153],punch:[139,30],lknock:[130,33],chokep:[119,11],runner:[71,16]},
+ "6 Iron":{appr:[181,117],chokea:[172,162],punch:[151,31],lknock:[140,34],chokep:[129,13],runner:[74,17]},
+ "5 Iron":{appr:[192,123],chokea:[183,172],punch:[162,32],lknock:[151,35],chokep:[139,14],runner:[77,17]},
+ "3 Iron":{appr:[213,134],chokea:[203,191],punch:[182,32],lknock:[168,35],chokep:[156,28]},
+ "2 Iron":{appr:[224,140],chokea:[213,200],punch:[192,33],lknock:[177,35],chokep:[164,28]},
+ "3 Wood":{appr:[254,204],chokea:[246,234],punch:[228,61],chokep:[194,49]},
+ "50\u00B0":{appr:[120,82],chokea:[114,108],pitch:[58,12],spin:[54,28],lflop:[43,26],flop:[31,18],thai:[16,12],sflop:[16,10],chip:[15,2]},
+ /* 56 deg lflop + flop carry INTERPOLATED values — see INTERP below, which
+    forces measured:false so the card shows the estimated-window warning.
+      lflop:[39,24]  max 39 MEASURED off screen; min 24 interpolated (50=26, 60=22)
+      flop:[28,16]   BOTH interpolated (50 deg flop 31/18, 60 deg flop 26/15)
+    Method validation: the same interpolation predicts the 56 deg lflop MAX at
+    38.9 against a measured 39 — accurate to well under a yard on this club,
+    which is why these are trusted enough to ship flagged rather than omitted.
+    Measuring replaces them: put the real pair here AND delete the matching
+    key from INTERP, or they will keep reporting as estimated. */
+ "56\u00B0":{appr:[105,74],chokea:[100,95],pitch:[53,11],spin:[50,27],lflop:[39,24],flop:[28,16],thai:[15,11],sflop:[14,9],chip:[14,2]},
+ "60\u00B0":{appr:[95,67],chokea:[91,86],pitch:[48,10],spin:[48,26],lflop:[36,22],flop:[26,15],thai:[13,10],sflop:[13,8],chip:[14,2]}
 };
 
-function buildChips(container, items, getKey, getLabel, onPick, activeKey){
-  container.innerHTML = "";
-  items.forEach((item)=>{
-    const el = document.createElement("div");
-    el.className = "chip" + (getKey(item)===activeKey ? " active":"");
-    el.textContent = getLabel(item);
-    el.onclick = ()=>{ onPick(item); render(); };
-    container.appendChild(el);
+/* INTERP — club/shot pairs whose WINDOWS entry was INTERPOLATED from measured
+   neighbours rather than read off the screen. windowFor forces measured:false
+   for anything listed here, so the estimated-window warning fires even though
+   both ends are non-zero.
+   This exists because the guard alone cannot tell the difference: a value is
+   "measured" to it if it is simply present and positive. Without this table,
+   dropping interpolated numbers into WINDOWS would silently reopen the exact
+   hole the zero-min guard closed — unverified data reading as fact.
+   DELETE a key here the moment the real pair is measured. */
+var INTERP={
+ "56\u00B0":{lflop:1, flop:1}
+};
+
+/* window(club, shot) -> [max,min].  Measured pair wins; otherwise fall back to
+   the shot's ratio against the club max, flagged as estimated. */
+function windowFor(club,shot){
+  var w=WINDOWS[club.name];
+  if(w && w[shot.key]){
+    var m=w[shot.key];
+    /* A window is only "measured" if BOTH ends were actually read off the
+       screen. A present-but-zero min used to fall through to m[0]*0.6 while
+       still returning measured:true, so the 56 deg Long Flop showed a
+       fabricated 23 yd minimum with no estimate warning — unverified data
+       presented as fact, which is the one thing this app must not do.
+       Max is checked too: a zero max is just as incomplete. */
+    var mxOK = m[0] > 0, mnOK = m[1] > 0;
+    /* INTERP pairs are complete but not measured — flag them. */
+    var interp = !!(INTERP[club.name] && INTERP[club.name][shot.key]);
+    if(mxOK && mnOK) return {mx:m[0], mn:m[1], measured: !interp};
+    return {
+      mx: mxOK ? m[0] : club.max*shot.maxPct,
+      mn: mnOK ? m[1] : (mxOK ? m[0]*0.6 : club.min*shot.maxPct),
+      measured: false
+    };
+  }
+  var mx=club.max*shot.maxPct;
+  var mn=(shot.minPct!==null&&shot.minPct!==undefined)?club.max*shot.minPct:club.min*shot.maxPct;
+  return {mx:mx, mn:mn, measured:false};
+}
+
+var SHOTS=[
+ {key:"auto",  name:"Auto",           grp:"",        clubs:["wood","iron","wedge"],from:["tee","turf","rough","sand"],windMult:1.00,roll:0,  maxPct:1.00, minPct:null, src:""},
+ {key:"tee",   name:"Tee shot",       grp:"Tee",     clubs:["wood","iron","wedge"],from:["tee"],  windMult:1.00,roll:0,  maxPct:1.00, minPct:null, src:"MEAS"},
+ {key:"pdrive",name:"Power drive",    grp:"Tee",     clubs:["wood"],               from:["tee"],  windMult:1.00,roll:0,  maxPct:1.10, minPct:null, src:"GUESS"},
+ {key:"sting", name:"Stinger",        grp:"Tee",     clubs:["wood","iron"],        from:["tee"],  windMult:0.50,roll:0,  maxPct:0.95, minPct:null, src:"GUESS"},
+ {key:"choket",name:"Choked tee",     grp:"Tee",     clubs:["wood"],               from:["tee"],  windMult:0.85,roll:0,  maxPct:0.93, minPct:null, src:"GUESS"},
+ {key:"appr",  name:"Approach",       grp:"Approach",clubs:["wood","iron","wedge"],from:["tee","turf","rough"],windMult:1.00,roll:0,maxPct:0.98,minPct:null,src:"MEAS"},
+ {key:"chokea",name:"Choked approach",grp:"Approach",clubs:["wood","iron","wedge"],from:["tee","turf","rough"],windMult:0.90,roll:0,maxPct:0.93,minPct:null,src:"GUESS"},
+ {key:"deck",  name:"Off the deck",   grp:"Approach",clubs:["wood"],               from:["turf"], windMult:0.80,roll:0,  maxPct:1.00, minPct:null, src:"GUESS"},
+ {key:"lknock",name:"Long knockdown", grp:"Short",   clubs:["iron"],               from:["turf","rough"],windMult:0.60,roll:4, maxPct:0.90,minPct:null,src:"MEAS"},
+ {key:"pitch", name:"Pitch",          grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.15,roll:8, maxPct:0.495,minPct:0.30,src:"MEAS"},
+ {key:"spin",  name:"Spinner",        grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.05,roll:5, maxPct:0.45,minPct:0.25,src:"YOURS"},
+ {key:"thai",  name:"Thai spinner",   grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.05,roll:2, maxPct:0.134,minPct:0.103,src:"MEAS"},
+ {key:"runner",name:"Runner",         grp:"Short",   clubs:["wedge"],              from:["turf","rough"],windMult:0.25,roll:16,maxPct:0.45,minPct:0.25,src:"GUESS"},
+ {key:"chip",  name:"Chip",           grp:"Short",   clubs:["wedge","iron"],       from:["turf","rough"],windMult:0.10,roll:6, maxPct:0.30,minPct:0.15,src:"GUESS"},
+ {key:"recov", name:"Recovery",       grp:"Recovery",clubs:["iron","wedge"],       from:["rough"],windMult:0.70,roll:0,  maxPct:0.85,minPct:null,src:"GUESS"},
+ {key:"punch", name:"Punch",          grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough"],windMult:0.50,roll:12,maxPct:0.70,minPct:null,src:"GUESS"},
+ {key:"chokep",name:"Choked punch",   grp:"Recovery",clubs:["wood","iron"],        from:["turf","rough"],windMult:0.50,roll:10,maxPct:0.65,minPct:null,src:"GUESS"},
+ {key:"flop",  name:"Flop",           grp:"Recovery",clubs:["wedge"],              from:["turf","rough"],windMult:0.30,roll:1, maxPct:0.35,minPct:0.18,src:"YOURS"},
+ {key:"sflop", name:"Super flop",     grp:"Recovery",clubs:["wedge"],              from:["turf","rough"],windMult:0.35,roll:0.5,maxPct:0.25,minPct:0.12,src:"GUESS"},
+ {key:"splash",name:"Splash",         grp:"Bunker",  clubs:["wedge"],              from:["sand"], windMult:0.20,roll:3, maxPct:0.454,minPct:0.20,src:"MEAS"},
+ {key:"pick",  name:"Pick",           grp:"Bunker",  clubs:["wedge"],              from:["sand"], windMult:0.20,roll:2, maxPct:0.35,minPct:0.15,src:"GUESS"},
+ {key:"ppick", name:"Power pick",     grp:"Bunker",  clubs:["iron"],               from:["sand"], windMult:0.40,roll:5, maxPct:0.60,minPct:0.30,src:"GUESS"},
+ {key:"blast", name:"Blast",          grp:"Bunker",  clubs:["wedge"],              from:["sand"], windMult:0.30,roll:14,maxPct:0.50,minPct:0.25,src:"GUESS"}
+];
+
+var SURFACES=[
+ {n:"Tee box",  lo:100,hi:100,from:"tee"},
+ {n:"Fairway",  lo:98, hi:99, from:"turf"},
+ {n:"Fringe",   lo:99, hi:100,from:"turf"},
+ {n:"Lt rough", lo:92, hi:97, from:"rough"},
+ {n:"Hvy rough",lo:87, hi:95, from:"rough"},
+ {n:"Bunker",   lo:80, hi:93, from:"sand"},
+ {n:"Mulch",    lo:76, hi:86, from:"rough"}
+];
+
+var WINDS=[
+ {key:"qhL",   ar:"\u2198",tx:"Q HEAD L", head:1, cross:1, q:true},
+ {key:"head",  ar:"\u2193",tx:"HEAD",     head:1, cross:0},
+ {key:"qhR",   ar:"\u2199",tx:"Q HEAD R", head:1, cross:-1,q:true},
+ {key:"crossL",ar:"\u2192",tx:"CROSS L\u2192R",head:0,cross:1},
+ {key:"none",  ar:"\u00B7",tx:"NONE",     head:0, cross:0},
+ {key:"crossR",ar:"\u2190",tx:"CROSS R\u2192L",head:0,cross:-1},
+ {key:"qtL",   ar:"\u2197",tx:"Q TAIL L", head:-1,cross:1, q:true},
+ {key:"tail",  ar:"\u2191",tx:"TAIL",     head:-1,cross:0},
+ {key:"qtR",   ar:"\u2196",tx:"Q TAIL R", head:-1,cross:-1,q:true}
+];
+
+var GREENSPEED=[
+ {key:"slow",name:"Slow",   mult:0.80},
+ {key:"avg", name:"Average",mult:1.00},
+ {key:"fast",name:"Fast",   mult:1.25}
+];
+
+var LANDING=[
+ {key:"green",  name:"Green",   mult:0.55},
+ {key:"fairway",name:"Fairway", mult:1.00},
+ {key:"fringe", name:"Fringe",  mult:0.80},
+ {key:"rough",  name:"Rough",   mult:0.55},
+ {key:"sand",   name:"Sand",    mult:0.15}
+];
+
+var S={dist:150,haz:0,lieLo:98,lieHi:99,elev:0,elevUp:true,wind:0,windDir:"none",
+       shot:"auto",land:"green",from:"turf",gspeed:"avg"};
+
+function $(id){return document.getElementById(id);}
+function num(id){return parseFloat($(id).value)||0;}
+function val(id,def){var v=parseFloat($(id).value);return isNaN(v)?def:v;}
+
+function buildSurf(){
+  var el=$("surfPresets"); el.innerHTML="";
+  SURFACES.forEach(function(s){
+    var d=document.createElement("div");
+    d.textContent=s.n;
+    d.onclick=function(){
+      $("fLieLo").value=s.lo;$("fLieHi").value=s.hi;
+      S.from=s.from; S.shot="auto"; buildSurf(); buildShotChips();
+    };
+    if(S.from===s.from) d.style.borderColor="var(--lcd-dim)";
+    el.appendChild(d);
   });
 }
+function buildCompass(){
+  var el=$("compass"); el.innerHTML="";
+  WINDS.forEach(function(w){
+    var d=document.createElement("div");
+    d.className="cbtn"+(S.windDir===w.key?" active":"");
+    d.innerHTML='<span class="ar">'+w.ar+'</span><span class="tx">'+w.tx+'</span>';
+    d.onclick=function(){S.windDir=w.key;buildCompass();};
+    el.appendChild(d);
+  });
+}
+function buildGsChips(){
+  var el=$("gsChips"); el.innerHTML="";
+  GREENSPEED.forEach(function(g){
+    var d=document.createElement("div");
+    d.className="chip"+(S.gspeed===g.key?" active":"");
+    d.textContent=g.name;
+    d.onclick=function(){S.gspeed=g.key;buildGsChips();};
+    el.appendChild(d);
+  });
+  $("gsField").style.display=(S.land==="green"||S.land==="fringe")?"block":"none";
+}
+function buildLandChips(){
+  var el=$("landChips"); el.innerHTML="";
+  LANDING.forEach(function(l){
+    var d=document.createElement("div");
+    d.className="chip"+(S.land===l.key?" active":"");
+    d.textContent=l.name;
+    d.onclick=function(){S.land=l.key;buildLandChips();buildGsChips();};
+    el.appendChild(d);
+  });
+}
+function shotsHere(){
+  return SHOTS.filter(function(sh){
+    return sh.key==="auto" || sh.from.indexOf(S.from)>=0;
+  });
+}
+function buildShotChips(){
+  var el=$("shotChips"); el.innerHTML="";
+  var list=shotsHere();
+  if(list.filter(function(sh){return sh.key===S.shot;}).length===0) S.shot="auto";
+  var lastGrp=null;
+  list.forEach(function(sh){
+    if(sh.grp!==lastGrp && sh.grp!==""){
+      var h=document.createElement("div");
+      h.style.cssText="width:100%;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;"+
+        "color:#4a5449;text-transform:uppercase;margin:6px 2px -2px;";
+      h.textContent=sh.grp;
+      el.appendChild(h); lastGrp=sh.grp;
+    }
+    var d=document.createElement("div");
+    d.className="chip"+(S.shot===sh.key?" active":"");
+    d.textContent=sh.name;
+    d.onclick=function(){S.shot=sh.key;buildShotChips();};
+    el.appendChild(d);
+  });
+}
+function buildBag(){
+  var el=$("bagRows"); el.innerHTML="";
+  BAG.forEach(function(c,i){
+    var r=document.createElement("div"); r.className="row";
+    r.innerHTML='<span class="lbl">'+c.name+'</span>'+
+      '<input type="number" data-i="'+i+'" data-f="min" value="'+c.min+'" title="min dial">'+
+      '<input type="number" data-i="'+i+'" data-f="max" value="'+c.max+'" title="max dial">'+
+      '<input type="number" data-i="'+i+'" data-f="total" value="'+c.total+'" title="max total">'+
+      '<input type="number" step="0.05" data-i="'+i+'" data-f="gr" value="'+c.gr+'" title="green roll factor">';
+    el.appendChild(r);
+  });
+  el.querySelectorAll("input").forEach(function(i){
+    i.addEventListener("input",function(e){
+      BAG[+e.target.dataset.i][e.target.dataset.f]=parseFloat(e.target.value)||0;});
+  });
+}
+function buildLandRows(){
+  var el=$("landRows"); el.innerHTML="";
+  LANDING.forEach(function(l,i){
+    var r=document.createElement("div"); r.className="row";
+    r.innerHTML='<span class="lbl">'+l.name+'</span>'+
+      '<span class="tag '+(l.key==="fairway"?'ok':'guess')+'">'+(l.key==="fairway"?'YOURS':'GUESS')+'</span>'+
+      '<input type="number" step="0.05" data-i="'+i+'" value="'+l.mult+'">';
+    el.appendChild(r);
+  });
+  el.querySelectorAll("input").forEach(function(i){
+    i.addEventListener("input",function(e){
+      LANDING[+e.target.dataset.i].mult=parseFloat(e.target.value)||0;});
+  });
+}
+function buildShotRows(){
+  var el=$("shotRows"); el.innerHTML="";
+  var lastGrp=null;
+  SHOTS.forEach(function(sh,i){
+    if(sh.key==="auto") return;
+    if(sh.grp!==lastGrp){
+      var h=document.createElement("div");
+      h.style.cssText="font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:#4a5449;"+
+        "text-transform:uppercase;margin:9px 2px 2px;";
+      h.textContent=sh.grp;
+      el.appendChild(h); lastGrp=sh.grp;
+    }
+    var r=document.createElement("div"); r.className="row";
+    r.innerHTML='<span class="lbl">'+sh.name+'</span>'+
+      '<span class="tag '+(sh.src==="GUESS"?"guess":"ok")+'">'+sh.src+'</span>'+
+      '<input type="number" step="0.005" data-i="'+i+'" data-f="maxPct" value="'+sh.maxPct+'" title="max as fraction of club max">'+
+      '<input type="number" step="0.05" data-i="'+i+'" data-f="windMult" value="'+sh.windMult+'" title="wind multiplier">'+
+      '<input type="number" step="0.5" data-i="'+i+'" data-f="roll" value="'+sh.roll+'" title="fixed roll">';
+    el.appendChild(r);
+  });
+  el.querySelectorAll("input").forEach(function(i){
+    i.addEventListener("input",function(e){
+      SHOTS[+e.target.dataset.i][e.target.dataset.f]=parseFloat(e.target.value)||0;});
+  });
+}
+$("udUp").onclick=function(){S.elevUp=true;$("udUp").classList.add("active");$("udDown").classList.remove("active");};
+$("udDown").onclick=function(){S.elevUp=false;$("udDown").classList.add("active");$("udUp").classList.remove("active");};
 
-function calib(){
-  return {
-    tailTotal: parseFloat(document.getElementById("cTailTotal").value)||0,
-    tailCarry: parseFloat(document.getElementById("cTailCarry").value)||0,
-    headMult: parseFloat(document.getElementById("cHeadMult").value)||1,
-    crossWith: parseFloat(document.getElementById("cCrossWith").value)||0,
-    crossAgainst: parseFloat(document.getElementById("cCrossAgainst").value)||0,
-    elevFt: parseFloat(document.getElementById("cElevFt").value)||3,
-    lightRough: parseFloat(document.getElementById("cLightRough").value)||0,
-    heavyRough: parseFloat(document.getElementById("cHeavyRough").value)||0,
-    sand: parseFloat(document.getElementById("cSand").value)||0,
-    tee: parseFloat(document.getElementById("cTee").value)||0,
-  };
+$("btnReset").onclick=function(){
+  ["fHaz","fElev","fWind","fLieLo","fLieHi"].forEach(function(id){$(id).value="";});
+  S.windDir="none"; S.shot="auto"; S.elevUp=true; S.land="green";
+  S.from="turf"; S.gspeed="avg";
+  $("udUp").classList.add("active"); $("udDown").classList.remove("active");
+  buildSurf(); buildCompass(); buildShotChips(); buildLandChips(); buildGsChips();
+};
+
+$("btnGo").onclick=function(){
+  S.dist =val("fDist",150);
+  S.haz  =val("fHaz",0);
+  S.lieLo=val("fLieLo",98);
+  S.lieHi=val("fLieHi",99);
+  if(S.lieHi<S.lieLo){var t=S.lieLo;S.lieLo=S.lieHi;S.lieHi=t;}
+  S.elev =Math.abs(val("fElev",0))*(S.elevUp?1:-1);
+  S.wind =Math.abs(val("fWind",0));
+  compute();
+  $("vEntry").classList.remove("on"); $("vResult").classList.add("on");
+  $("verTag").textContent="Result";
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+$("btnBack").onclick=function(){
+  $("vResult").classList.remove("on"); $("vEntry").classList.add("on");
+  $("verTag").textContent="Setup";
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+function autoShot(dist,wind,lieMid){
+  function g(k){return SHOTS.filter(function(x){return x.key===k;})[0];}
+  if(S.from==="sand") return dist<=60?g("splash"):g("blast");
+  if(S.from==="tee")  return wind>=12?g("sting"):g("tee");
+  if(dist<=30)  return g("chip");
+  if(dist<=60)  return g("spin");
+  if(dist<100)  return g("pitch");
+  if(wind>=12)  return g("knock");
+  return g("appr");
 }
 
-function lieDelta(c, key){
-  if(key==="light") return c.lightRough;
-  if(key==="heavy") return c.heavyRough;
-  if(key==="sand") return c.sand;
-  if(key==="tee") return c.tee;
-  return 0;
-}
+function compute(){
+  var wd=WINDS.filter(function(w){return w.key===S.windDir;})[0];
+  var qf=wd.q?num("cQuarter"):1;
+  var lieMid=(S.lieLo+S.lieHi)/2;
+  var shot=S.shot==="auto"?autoShot(S.dist,S.wind,lieMid)
+                          :SHOTS.filter(function(s){return s.key===S.shot;})[0];
 
-function render(){
-  const c = calib();
-  const club = CLUBS[state.club];
-  document.getElementById("clubTag").textContent = club.name;
+  var elevCost=S.elev/num("cElev");
+  var headMph=wd.head*S.wind*qf*shot.windMult;
+  var landSurf=LANDING.filter(function(l){return l.key===S.land;})[0];
+  var landMult=landSurf.mult;
+  var gs=GREENSPEED.filter(function(g){return g.key===S.gspeed;})[0];
+  if(S.land==="green"||S.land==="fringe") landMult*=gs.mult;
 
-  // 1. Lie %
-  const liePct = lieDelta(c, state.lie);
-  let carry = club.carry * (1 + liePct/100);
-  let total = club.total * (1 + liePct/100);
+  var teeOnly={tee:1,pdrive:1,sting:1,choket:1,deck:1,auto:1};
+  var usable=BAG.filter(function(c){
+    if(shot.clubs.indexOf(c.cls)<0) return false;
+    if(c.driver && !teeOnly[shot.key]) return false;
+    var w=WINDOWS[c.name];
+    if(w && !w[shot.key] && shot.key!=="tee" && shot.key!=="auto") return false;
+    return true;
+  });
+  if(usable.length===0) usable=BAG.slice();
 
-  // 2. Elevation: feet per 1 yard; uphill (+ft) reduces distance, downhill (-ft) adds
-  const elevYds = -(state.elev / c.elevFt);
-  carry += elevYds;
-  total += elevYds;
-
-  // 3. Wind
-  let lateral = 0;
-  if(state.windDir==="tail"){
-    carry += c.tailCarry * state.wind;
-    total += c.tailTotal * state.wind;
-  } else if(state.windDir==="head"){
-    carry -= c.tailCarry * c.headMult * state.wind;
-    total -= c.tailTotal * c.headMult * state.wind;
-  } else if(state.windDir==="cross_with"){
-    lateral = c.crossWith * state.wind;
-  } else if(state.windDir==="cross_against"){
-    lateral = c.crossAgainst * state.wind;
+  /* forward model: given a dialed number D and a lie multiplier L,
+     where does the ball land and stop? */
+  function fly(D,L,ratio,club){
+    var carry=D*(L/100);
+    carry-=elevCost;
+    if(headMph>0){
+      var rate=carry>=num("cFullThresh")?num("cHeadFull"):num("cHeadApp");
+      carry-=headMph*rate;
+    } else if(headMph<0){ carry-=headMph*num("cTail"); }
+    carry=Math.max(1,carry);
+    var gr=(S.land==="green"||S.land==="fringe")?(club.gr||1):1;
+    var roll=(shot.roll>0?shot.roll:carry*ratio)*landMult*gr;
+    return {carry:carry,roll:roll,stop:carry+roll};
   }
 
-  carry = Math.max(0, Math.round(carry));
-  total = Math.max(0, Math.round(total));
-  const roll = Math.max(0, total - carry);
-  const delta = total - club.total;
-
-  document.getElementById("carryOut").textContent = carry;
-  document.getElementById("rollOut").textContent = roll;
-  document.getElementById("totalOut").innerHTML = total + "<span>yd</span>";
-  document.getElementById("deltaOut").textContent = (delta>=0?"+":"") + delta;
-
-  const driftRow = document.getElementById("driftRow");
-  if(lateral !== 0){
-    driftRow.classList.add("show");
-    document.getElementById("driftVal").textContent = Math.round(lateral) + " yd";
-  } else {
-    driftRow.classList.remove("show");
+  /* solve the dial that stops on target at the middle of the lie range */
+  function solve(club){
+    var win=windowFor(club,shot);
+    var mc=win.mx;
+    var mt=club.total*(win.mx/club.max);
+    var ratio=mc>0?(mt-mc)/mc:0;
+    var lo=1, hi=600, D=0;
+    for(var i=0;i<40;i++){
+      D=(lo+hi)/2;
+      if(fly(D,lieMid,ratio,club).stop < S.dist) lo=D; else hi=D;
+    }
+    var mid=fly(D,lieMid,ratio,club);
+    var best=fly(D,S.lieHi,ratio,club);
+    var worst=fly(D,S.lieLo,ratio,club);
+    var mn=win.mn;
+    return {club:club,dial:D,ratio:ratio,mid:mid,best:best,worst:worst,
+            power:D/mc,mc:mc,mn:mn,measured:win.measured,
+            inRange:(D<=mc+0.5 && D>=mn-0.5)};
   }
 
-  // labels
-  document.getElementById("elevVal").textContent = (state.elev>0?"+":"") + state.elev;
-  document.getElementById("elevLabel").textContent = state.elev===0 ? "Flat" : (state.elev>0 ? "Uphill" : "Downhill");
-  document.getElementById("windVal").textContent = state.wind;
-  document.getElementById("windLabel").textContent = state.wind===0 ? "No wind" : WINDS.find(w=>w.key===state.windDir).name;
+  var solved=usable.map(solve);
+  var fits=solved.filter(function(r){return r.inRange;})
+                 .sort(function(a,b){return a.mc-b.mc;});
+  var R=fits[0], warn="";
+  if(!R){
+    R=solved.slice().sort(function(a,b){return Math.abs(a.power-.9)-Math.abs(b.power-.9);})[0];
+    warn=solved.every(function(r){return r.dial>r.mc;})
+      ?"Out of range \u2014 nothing reaches. Lay up."
+      :"Falls in a gap \u2014 no club dials that number. Closest shown.";
+  }
 
-  buildChips(document.getElementById("clubChips"), CLUBS, c=>CLUBS.indexOf(c), c=>c.name,
-    (item)=>{ state.club = CLUBS.indexOf(item); }, CLUBS.indexOf(club));
-  buildChips(document.getElementById("lieChips"), LIES, l=>l.key, l=>l.name,
-    (item)=>{ state.lie = item.key; }, state.lie);
-  buildChips(document.getElementById("windChips"), WINDS, w=>w.key, w=>w.name,
-    (item)=>{ state.windDir = item.key; }, state.windDir);
+  var aimYd=0,aimDir="",shapeRx="Straight";
+  var crossMph=Math.abs(wd.cross)*S.wind*qf*shot.windMult;
+  if(crossMph>0.3){
+    var pushRight=wd.cross>0;
+    shapeRx=pushRight?"Draw":"Fade";
+    /* drift scales with how long the ball is in the air, i.e. with distance */
+    var ref=num("cCrossRef")||250;
+    aimYd=crossMph*num("cCross")*(R.mid.carry/ref);
+    aimDir=pushRight?"left":"right";
+  }
+
+  if(S.haz>0&&R.worst.carry<S.haz+2)
+    warn="Worst-case lands "+Math.round(R.worst.carry)+" \u2014 short of the "+S.haz+" yd carry. Club up.";
+
+  var spread=R.best.stop-R.worst.stop;
+  if(!R.measured && !warn) warn="Estimated window \u2014 this club/shot pair isn't measured yet.";
+
+  $("clubOut").textContent=R.club.name;
+  $("modeTag").textContent=S.shot==="auto"?"Auto \u2192 "+shot.name:shot.name;
+  var pw=Math.round(R.power*100);
+  $("dialOut").textContent=Math.round(R.dial);
+  $("powerOut").textContent=pw+"%";
+  $("powerFill").style.width=Math.min(100,pw)+"%";
+  $("shotRx").textContent=shot.name;
+  $("shapeRx").textContent=shapeRx;
+
+  function rng(a,b){
+    var lo=Math.round(a),hi=Math.round(b);
+    return lo===hi?(""+lo):(lo+"\u2013"+hi);
+  }
+  $("landOut").textContent=rng(R.worst.carry,R.best.carry);
+  $("rollOut").textContent=Math.round(R.mid.roll);
+  $("stopOut").textContent=rng(R.worst.stop,R.best.stop);
+
+  var aimRow=$("aimRow");
+  if(aimYd>=1){
+    aimRow.classList.add("show");
+    aimRow.innerHTML=(aimDir==="left"?"\u25C0":"\u25B6")+" Aim <span style='color:var(--paper)'>"+
+      Math.round(aimYd)+" yd "+aimDir+"</span>";
+  } else aimRow.classList.remove("show");
+
+  var warnRow=$("warnRow");
+  if(warn){warnRow.classList.add("show");warnRow.textContent="\u26A0 "+warn;}
+  else warnRow.classList.remove("show");
+
+  var alts=solved.filter(function(r){return r.club!==R.club&&r.inRange;})
+    .sort(function(a,b){return Math.abs(a.mc-R.mc)-Math.abs(b.mc-R.mc);}).slice(0,2)
+    .map(function(r){return r.club.name+" @ "+Math.round(r.power*100)+"%";});
+  $("altsRow").textContent=alts.length?"Also: "+alts.join("   \u00B7   "):"";
+
+  var bits=[S.dist+" yd"];
+  if(S.elev) bits.push(Math.abs(S.elev)+" ft "+(S.elev>0?"up":"down"));
+  if(S.wind) bits.push(S.wind+" mph "+wd.tx.toLowerCase());
+  bits.push("lie "+S.lieLo+"\u2013"+S.lieHi+"%");
+  bits.push("lands on "+landSurf.name.toLowerCase());
+  if(S.haz) bits.push("carry "+S.haz);
+  if(spread>=2) bits.push(Math.round(spread)+" yd lie spread");
+  $("recapRow").textContent=bits.join("  \u00B7  ");
 }
 
-document.getElementById("elevMinus").onclick = ()=>{ state.elev -= 1; render(); };
-document.getElementById("elevPlus").onclick  = ()=>{ state.elev += 1; render(); };
-document.getElementById("windMinus").onclick = ()=>{ state.wind = Math.max(0, state.wind-1); render(); };
-document.getElementById("windPlus").onclick  = ()=>{ state.wind += 1; render(); };
-
-document.querySelectorAll('details input').forEach(inp=>{
-  inp.addEventListener('input', render);
-  inp.addEventListener('click', e=>e.stopPropagation());
-});
-
-render();
+buildSurf(); buildCompass(); buildLandChips(); buildGsChips(); buildShotChips();
+buildBag(); buildShotRows(); buildLandRows();
 </script>
 </body>
 </html>
