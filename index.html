@@ -350,7 +350,7 @@
     </div>
 
     <div class="field">
-      <div class="flabel"><span>Loft</span><span class="hint">auto adds only what you need</span></div>
+      <div class="flabel"><span>Loft</span><span class="hint">down on the stick is more loft</span></div>
       <div class="chip-grid" id="loftChips"></div>
     </div>
 
@@ -487,7 +487,7 @@
       <div class="prescribe">
         <div class="px"><span class="n" id="shotRx">Approach</span><span class="l">Shot</span></div>
         <div class="px"><span class="n" id="shapeRx">Straight</span><span class="l">Shape</span></div>
-        <div class="px"><span class="n" id="loftRx">Neutral</span><span class="l">Loft</span></div>
+        <div class="px"><span class="n" id="loftRx">Neutral</span><span class="l" id="loftLbl">Loft</span></div>
       </div>
       <div class="why" id="loftWhy"></div>
 
@@ -724,13 +724,41 @@ var WINDS=[
    Roll is a separate, weaker claim: measured on the 7 Iron ONLY - full
    high 4 yd against 5 neutral, full low 6 - so roughly 0.8x and 1.2x.
    One club is not a curve. It is an estimate and says so. */
+/* The control is inverted against the flight: DOWN on the stick is MORE
+   loft, UP is LESS. These are named for the flight produced, because that
+   is what the model reasons about, and `stick` carries the direction to
+   actually push - which is the only thing that matters standing over the
+   ball. Do not rename these to the stick direction; the physics comments
+   throughout refer to high and low flight. */
 var LOFTS=[
- {v:-2,name:"Full low"},
- {v:-1,name:"Half low"},
- {v:0, name:"Neutral"},
- {v:1, name:"Half high"},
- {v:2, name:"Full high"}
+ {v:-2,name:"Full low", stick:"stick full up"},
+ {v:-1,name:"Half low", stick:"stick half up"},
+ {v:0, name:"Neutral",  stick:""},
+ {v:1, name:"Half high",stick:"stick half down"},
+ {v:2, name:"Full high",stick:"stick full down"}
 ];
+
+/* KNOWN, AND DELIBERATELY NOT MODELLED.
+   The carry line above was fitted in still air on flat ground. It does
+   NOT survive contact with wind or slope:
+
+     more loft into a headwind   -> pushed back, shorter still
+     more loft downwind          -> carried further
+     more loft uphill            -> comes up short
+     more loft with the hole below you -> runs long
+
+   Four directions, no magnitudes, so the model cannot apply them. What
+   it CAN do is refuse to give advice it has no basis for: two of those
+   four - uphill and into wind - make the ball land SHORTER than this
+   model says, and the whole purpose of the loft recommendation is
+   clearing something short of the green. Being wrong in that direction
+   puts the ball in the hazard. So Auto declines rather than guesses.
+
+   Crosswind is not excluded: it moves the ball sideways in this model,
+   not up or down the line. */
+function loftAdviceSafe(wd){
+  return !(wd.head!==0 && S.wind>0) && !S.elev;
+}
 function loftCarryPct(club,pos){
   if(!pos) return 0;
   var full = pos<0 ? (-6.3 + (club.max-95)*(5.6/195))
@@ -1224,13 +1252,21 @@ function compute(){
      The threshold is the same haz+2 the hazard warning uses, so the
      recommendation and the warning can never contradict each other. */
   var loftAuto=(S.loft==="auto"), res, loftPos, loftForced=false;
+  var loftBlind=loftAuto && !loftAdviceSafe(wd);
   if(loftAuto){
-    var order=[0,1,2];
-    for(var lp=0; lp<order.length; lp++){
-      loftPos=order[lp];
-      res=selectFor(loftPos);
-      if(!(S.haz>0)) break;                       /* nothing to clear */
-      if(res.R && res.R.worst.carry>=S.haz+2){ loftForced=(loftPos!==0); break; }
+    if(loftBlind){
+      /* Wind or slope in play and the interaction is unmeasured. Hold at
+         neutral and say so; the hazard warning still fires on its own and
+         "club up" remains sound advice. */
+      loftPos=0; res=selectFor(0);
+    } else {
+      var order=[0,1,2];
+      for(var lp=0; lp<order.length; lp++){
+        loftPos=order[lp];
+        res=selectFor(loftPos);
+        if(!(S.haz>0)) break;                     /* nothing to clear */
+        if(res.R && res.R.worst.carry>=S.haz+2){ loftForced=(loftPos!==0); break; }
+      }
     }
   } else {
     loftPos=S.loft;
@@ -1265,19 +1301,37 @@ function compute(){
   $("powerFill").style.width=Math.min(100,pw)+"%";
   $("shotRx").textContent=shot.name;
   $("shapeRx").textContent=shapeRx;
-  var loftName=LOFTS.filter(function(l){return l.v===loftPos;})[0].name;
+  var loftRow=LOFTS.filter(function(l){return l.v===loftPos;})[0];
+  var loftName=loftRow.name;
   $("loftRx").textContent=loftName;
+  /* The label carries the direction to push, because the stick is
+     inverted against the flight and that is easy to get backwards with a
+     shot waiting. */
+  $("loftLbl").textContent=loftRow.stick?("Loft \u00B7 "+loftRow.stick):"Loft";
   var why=$("loftWhy");
-  if(loftAuto && loftForced){
+  why.classList.remove("show");
+  if(loftBlind){
     why.classList.add("show");
-    why.textContent="Flighted up to "+loftName.toLowerCase()+" to carry the "+S.haz+
-      " yd hazard \u2014 it lands "+Math.round(R.worst.carry)+" at worst and still stops on "+
-      S.dist+".";
+    why.textContent="Held at neutral. More loft "+
+      (S.elev>0?"into a climb comes up short":
+       S.elev<0?"with the hole below you runs long":
+       (wd.head>0?"into the wind gets pushed back":"downwind carries further"))+
+      ", and by how much is not measured yet \u2014 so no loft is advised here. Set it by hand "+
+      "if you know the shot.";
+  } else if(loftAuto && loftForced){
+    why.classList.add("show");
+    why.textContent="Flighted up to "+loftName.toLowerCase()+" \u2014 "+loftRow.stick+
+      " \u2014 to carry the "+S.haz+" yd hazard. It lands "+Math.round(R.worst.carry)+
+      " at worst and still stops on "+S.dist+".";
   } else if(loftAuto && S.haz>0 && R && R.worst.carry<S.haz+2){
     why.classList.add("show");
     why.textContent="No amount of height carries the "+S.haz+
       " yd hazard with this club. Shown at full high.";
-  } else why.classList.remove("show");
+  } else if(!loftAuto && loftPos && !loftAdviceSafe(wd)){
+    why.classList.add("show");
+    why.textContent="These carry figures assume still air and flat ground. Loft\u2019s effect "+
+      "in wind and on slopes is not measured yet, so treat this one as unverified.";
+  }
 
   function rng(a,b){
     var lo=Math.round(a),hi=Math.round(b);

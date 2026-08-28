@@ -136,6 +136,42 @@ giving −6.3/+3.2 on the 60°, −4.1/+1.9 on the 7 Iron, −0.7/0 on the Drive
 validation.** It lands within 0.3%: measured −4.1%/+2.4% against predicted −4.1%/+1.9%. That
 hold-out is why the line is trusted across clubs it was never fitted to.
 
+### The stick is inverted
+
+**DOWN on the loft stick is MORE loft. UP is LESS.** `LOFTS` names each position for the
+*flight* it produces, because that is what the model reasons about, and carries a `stick` field
+with the direction to actually push. The result card prints that direction in the Loft label —
+it is easy to get backwards with a shot waiting. Do not rename the positions to stick
+directions; every physics comment in the file refers to high and low flight.
+
+### Loft × wind and loft × slope are NOT modelled
+
+The carry line was fitted in still air on flat ground. It does not survive contact with either:
+
+| condition | more loft does this |
+| --- | --- |
+| into a headwind | pushed back — **shorter still** |
+| downwind | carried further |
+| uphill | comes up **short** |
+| hole below you | runs long |
+
+Four directions, **no magnitudes**, so the model cannot apply them — and must not pretend to.
+
+**Two of those four make the ball land shorter than this model says, and the entire purpose of
+the loft recommendation is clearing something short of the green.** Being wrong in that
+direction puts the ball in the hazard the advice was meant to avoid. So `loftAdviceSafe()` makes
+Auto decline whenever a head or tail wind or any slope is in play: it holds Neutral and says
+which of the four applies. The hazard warning still fires on its own, and "club up" stays sound
+advice regardless of loft. Setting loft by hand under those conditions prints an unverified
+caveat rather than being blocked.
+
+Crosswind is *not* excluded — it moves the ball sideways in this model, not up or down the line.
+
+**To close this**, measure full high against neutral on one club, at two wind speeds and two
+slopes: 10 and 20 mph headwind on the flat, and 30 and 60 ft uphill in still air, against a
+still-air flat baseline. If the interaction scales with wind speed and with elevation, that is
+one coefficient each and it can go straight in.
+
 ### Auto loft prescribes; it does not just accept
 
 Loft defaults to **Auto**, and Auto answers one question: *how much height do I need to ADD.*
